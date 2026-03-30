@@ -89,6 +89,20 @@
 - `README.md`：项目说明
 - `TODO.md`：按阶段拆分的开发清单
 - `docs/requirements.md`：MVP 需求与关键决策
+- `docs/structure.md`：项目目录结构说明
+
+当前目录骨架：
+
+```text
+addon/
+docs/
+src/
+  bootstrap/
+  services/
+  settings/
+  sidebar/
+  utils/
+```
 
 目前还没有正式的 Zotero 插件代码骨架，接下来会先完成基础项目结构与插件入口搭建。
 
@@ -123,4 +137,3 @@
 - 添加 `.gitignore`
 - 确定插件目录结构
 - 搭建 Zotero 8 插件最小骨架
-
