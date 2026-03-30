@@ -163,6 +163,51 @@ function getItemTitle(item?: Zotero.Item): string {
     : "Untitled item";
 }
 
+function stripHtml(html: string): string {
+  return html
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function buildCurrentTextPreview(item?: Zotero.Item): string {
+  if (!item) {
+    return "No current text available.";
+  }
+
+  const sections: string[] = [];
+  const title = getItemTitle(item);
+  if (title && title !== "Untitled item") {
+    sections.push(`Title:\n${title}`);
+  }
+
+  const abstractText = item.getField("abstractNote");
+  if (typeof abstractText === "string" && abstractText.trim()) {
+    sections.push(`Abstract:\n${abstractText.trim()}`);
+  }
+
+  const noteIDs =
+    typeof item.getNotes === "function" ? (item.getNotes() as number[]) : [];
+  if (noteIDs.length) {
+    const noteItems = Zotero.Items.get(noteIDs) as Zotero.Item[];
+    const notePreview = noteItems
+      .map((noteItem) => stripHtml(noteItem.getNote?.() || ""))
+      .filter(Boolean)
+      .slice(0, 2)
+      .join("\n\n");
+
+    if (notePreview) {
+      sections.push(`Notes:\n${notePreview}`);
+    }
+  }
+
+  if (!sections.length) {
+    return "Selected item has no previewable text yet.";
+  }
+
+  return sections.join("\n\n");
+}
+
 function setPaneState(
   body: HTMLDivElement,
   state: PaneState,
@@ -245,8 +290,7 @@ function renderPane(body: HTMLDivElement, item?: Zotero.Item): void {
   }
 
   if (contextPreviewElement) {
-    contextPreviewElement.textContent =
-      "Current context preview will show title, abstract, and notes from the selected item.";
+    contextPreviewElement.textContent = buildCurrentTextPreview(item);
   }
 
   if (outputPreviewElement) {
