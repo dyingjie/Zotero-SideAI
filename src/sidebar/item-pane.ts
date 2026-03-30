@@ -10,6 +10,7 @@ import {
   getSavedSystemPrompt,
   saveSystemPrompt
 } from "../settings/system-prompt";
+import { resetSettingsToDefaults } from "../settings/reset";
 
 const SIDEBAR_PANE_ID = "sideai-panel";
 
@@ -386,6 +387,21 @@ function persistSettings(body: HTMLDivElement): void {
   }
 }
 
+function restoreDefaultSettings(body: HTMLDivElement): void {
+  try {
+    resetSettingsToDefaults();
+    syncSavedSettings(body);
+    setConfigSummary(body, "Settings restored to defaults.");
+  } catch (error) {
+    Zotero.logError(
+      error instanceof Error
+        ? error
+        : new Error("Unable to restore default settings.")
+    );
+    setConfigSummary(body, "Unable to restore defaults right now.");
+  }
+}
+
 function renderPane(body: HTMLDivElement, item?: Zotero.Item): void {
   applyPaneLayout(body);
 
@@ -554,6 +570,7 @@ export function registerSideAIPane(): false | string {
               </html:div>
               <html:div class="sideai-pane-actions">
                 <html:button data-sideai-role="save-settings-button">Save Settings</html:button>
+                <html:button data-sideai-role="reset-settings-button">Restore Defaults</html:button>
               </html:div>
               <html:div class="sideai-pane-muted" data-sideai-role="config-summary"></html:div>
             </html:div>
@@ -597,6 +614,9 @@ export function registerSideAIPane(): false | string {
       const saveButton = body.querySelector(
         "[data-sideai-role='save-settings-button']"
       ) as HTMLButtonElement | null;
+      const resetButton = body.querySelector(
+        "[data-sideai-role='reset-settings-button']"
+      ) as HTMLButtonElement | null;
 
       syncSavedSettings(body);
 
@@ -610,6 +630,10 @@ export function registerSideAIPane(): false | string {
 
       saveButton?.addEventListener("click", () => {
         persistSettings(body);
+      });
+
+      resetButton?.addEventListener("click", () => {
+        restoreDefaultSettings(body);
       });
     },
     onItemChange: ({ item, setEnabled, tabType }) => {

@@ -16,6 +16,7 @@ import {
   getSavedSystemPrompt,
   saveSystemPrompt
 } from "../src/settings/system-prompt";
+import { resetSettingsToDefaults } from "../src/settings/reset";
 
 describe("startup", function () {
   it("should register plugin instance on Zotero", function () {
@@ -76,6 +77,20 @@ describe("startup", function () {
     assert.strictEqual(getSavedSystemPrompt(), "Summarize this paper in Chinese.");
 
     Zotero.Prefs.clear(prefKey, true);
+  });
+
+  it("should restore settings to defaults", function () {
+    saveApiKey("sk-custom");
+    saveBaseUrl("https://example.com/custom");
+    saveModel("gpt-custom");
+    saveSystemPrompt("Custom prompt");
+
+    resetSettingsToDefaults();
+
+    assert.strictEqual(getSavedApiKey(), "");
+    assert.strictEqual(getSavedBaseUrl(), getDefaultBaseUrl());
+    assert.strictEqual(getSavedModel(), getDefaultModel());
+    assert.strictEqual(getSavedSystemPrompt(), getDefaultSystemPrompt());
   });
 
   it("should clean plugin instance on shutdown", async function () {
