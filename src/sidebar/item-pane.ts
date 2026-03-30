@@ -3,6 +3,107 @@ const SIDEBAR_PANE_ID = "sideai-panel";
 let registeredPaneKey: false | string = false;
 type PaneState = "empty" | "ready" | "loading" | "error";
 
+function applyPaneLayout(body: HTMLDivElement): void {
+  const root = body.querySelector(".sideai-pane-root") as HTMLDivElement | null;
+  const cards = body.querySelectorAll(".sideai-pane-card");
+  const mutedBlocks = body.querySelectorAll(".sideai-pane-muted");
+  const sections = body.querySelectorAll(".sideai-pane-section");
+  const actions = body.querySelector(".sideai-pane-actions") as HTMLDivElement | null;
+  const buttons = body.querySelectorAll("button");
+  const state = body.querySelector(".sideai-pane-state") as HTMLDivElement | null;
+  const title = body.querySelector(".sideai-pane-title") as HTMLDivElement | null;
+
+  if (root) {
+    root.style.display = "flex";
+    root.style.flexDirection = "column";
+    root.style.gap = "10px";
+    root.style.width = "100%";
+    root.style.boxSizing = "border-box";
+    root.style.overflowX = "hidden";
+    root.style.padding = "2px 0";
+  }
+
+  if (state) {
+    state.style.fontSize = "12px";
+    state.style.fontWeight = "600";
+    state.style.padding = "6px 8px";
+    state.style.borderRadius = "6px";
+    state.style.background = "var(--fill-quinary, rgba(0,0,0,0.05))";
+    state.style.overflowWrap = "anywhere";
+  }
+
+  if (title) {
+    title.style.fontWeight = "600";
+    title.style.marginBottom = "6px";
+    title.style.overflowWrap = "anywhere";
+  }
+
+  sections.forEach((section: Element) => {
+    const element = section as HTMLDivElement;
+    element.style.display = "flex";
+    element.style.flexDirection = "column";
+    element.style.gap = "4px";
+    element.style.minWidth = "0";
+  });
+
+  cards.forEach((card: Element) => {
+    const element = card as HTMLDivElement;
+    element.style.padding = "8px";
+    element.style.borderRadius = "8px";
+    element.style.boxSizing = "border-box";
+    element.style.background = "var(--fill-quinary, rgba(0,0,0,0.05))";
+    element.style.border = "1px solid var(--fill-tertiary, rgba(0,0,0,0.08))";
+    element.style.minWidth = "0";
+    element.style.overflowWrap = "anywhere";
+  });
+
+  mutedBlocks.forEach((block: Element) => {
+    const element = block as HTMLDivElement;
+    element.style.fontSize = "12px";
+    element.style.lineHeight = "1.45";
+    element.style.color = "var(--text-color-deemphasized, #666)";
+    element.style.whiteSpace = "pre-wrap";
+    element.style.overflowWrap = "anywhere";
+  });
+
+  const contextPreview = body.querySelector(
+    "[data-sideai-role='context-preview']"
+  ) as HTMLDivElement | null;
+  const outputPreview = body.querySelector(
+    "[data-sideai-role='output-preview']"
+  ) as HTMLDivElement | null;
+
+  if (contextPreview) {
+    contextPreview.style.maxHeight = "120px";
+    contextPreview.style.overflowY = "auto";
+  }
+
+  if (outputPreview) {
+    outputPreview.style.minHeight = "84px";
+    outputPreview.style.maxHeight = "180px";
+    outputPreview.style.overflowY = "auto";
+    outputPreview.style.whiteSpace = "pre-wrap";
+    outputPreview.style.overflowWrap = "anywhere";
+  }
+
+  if (actions) {
+    actions.style.display = "flex";
+    actions.style.flexWrap = "wrap";
+    actions.style.gap = "6px";
+    actions.style.width = "100%";
+  }
+
+  buttons.forEach((button: Element) => {
+    const element = button as HTMLButtonElement;
+    element.style.flex = "1 1 80px";
+    element.style.minWidth = "0";
+    element.style.maxWidth = "100%";
+    element.style.whiteSpace = "nowrap";
+    element.style.overflow = "hidden";
+    element.style.textOverflow = "ellipsis";
+  });
+}
+
 function getItemTitle(item?: Zotero.Item): string {
   if (!item) {
     return "No item selected";
@@ -70,6 +171,8 @@ function setPaneState(
 }
 
 function renderPane(body: HTMLDivElement, item?: Zotero.Item): void {
+  applyPaneLayout(body);
+
   const titleElement = body.querySelector(
     "[data-sideai-role='title']"
   ) as HTMLDivElement | null;
@@ -183,6 +286,8 @@ export function registerSideAIPane(): false | string {
       </html:div>
     `,
     onInit: ({ body }) => {
+      applyPaneLayout(body);
+
       const copyButton = body.querySelector(
         "[data-sideai-role='copy-button']"
       ) as HTMLButtonElement | null;
