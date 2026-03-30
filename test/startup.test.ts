@@ -1,5 +1,6 @@
 import { assert } from "chai";
 import { config } from "../package.json";
+import { getSavedApiKey, saveApiKey } from "../src/settings/api-key";
 
 describe("startup", function () {
   it("should register plugin instance on Zotero", function () {
@@ -13,6 +14,17 @@ describe("startup", function () {
 
     assert.equal(plugin.data?.initialized, true);
     assert.isString(plugin.data?.sidebarPaneKey);
+  });
+
+  it("should persist API key in Zotero prefs", function () {
+    const prefKey = `${config.prefsPrefix}.apiKey`;
+
+    Zotero.Prefs.clear(prefKey, true);
+    saveApiKey("sk-sideai-test");
+
+    assert.strictEqual(getSavedApiKey(), "sk-sideai-test");
+
+    Zotero.Prefs.clear(prefKey, true);
   });
 
   it("should clean plugin instance on shutdown", async function () {

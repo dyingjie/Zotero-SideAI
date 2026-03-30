@@ -1,3 +1,5 @@
+import { getSavedApiKey, saveApiKey } from "../settings/api-key";
+
 const SIDEBAR_PANE_ID = "sideai-panel";
 
 let registeredPaneKey: false | string = false;
@@ -293,6 +295,50 @@ function setPaneState(
   }
 }
 
+function getApiKeyInput(body: HTMLDivElement): HTMLInputElement | null {
+  return body.querySelector("#sideai-apikey") as HTMLInputElement | null;
+}
+
+function setConfigSummary(body: HTMLDivElement, message: string): void {
+  const configSummaryElement = body.querySelector(
+    "[data-sideai-role='config-summary']"
+  ) as HTMLDivElement | null;
+
+  if (configSummaryElement) {
+    configSummaryElement.textContent = message;
+  }
+}
+
+function syncSavedApiKey(body: HTMLDivElement): void {
+  const apiKeyInput = getApiKeyInput(body);
+
+  if (!apiKeyInput) {
+    return;
+  }
+
+  apiKeyInput.value = getSavedApiKey();
+}
+
+function persistApiKey(body: HTMLDivElement): void {
+  const apiKeyInput = getApiKeyInput(body);
+  if (!apiKeyInput) {
+    return;
+  }
+
+  try {
+    saveApiKey(apiKeyInput.value);
+    setConfigSummary(
+      body,
+      "API Key saved locally. Persistence for other settings will be added next."
+    );
+  } catch (error) {
+    Zotero.logError(
+      error instanceof Error ? error : new Error("Unable to save API Key.")
+    );
+    setConfigSummary(body, "Unable to save API Key right now.");
+  }
+}
+
 function renderPane(body: HTMLDivElement, item?: Zotero.Item): void {
   applyPaneLayout(body);
 
@@ -316,7 +362,9 @@ function renderPane(body: HTMLDivElement, item?: Zotero.Item): void {
 
   if (configSummaryElement) {
     configSummaryElement.textContent =
-      "Model settings and fixed system prompt UI are ready. Persistence will be added next.";
+      getSavedApiKey()
+        ? "API Key is loaded from local settings. Persistence for other settings is still pending."
+        : "API Key is not saved yet. Other settings persistence will be added later.";
   }
 
   if (contextPreviewElement) {
@@ -455,7 +503,7 @@ export function registerSideAIPane(): false | string {
                 >You are an academic reading assistant. Summarize the selected paper content clearly and faithfully.</html:textarea>
               </html:div>
               <html:div class="sideai-pane-actions">
-                <html:button disabled="true">Save Settings</html:button>
+                <html:button data-sideai-role="save-settings-button">Save API Key</html:button>
               </html:div>
               <html:div class="sideai-pane-muted" data-sideai-role="config-summary"></html:div>
             </html:div>
@@ -496,6 +544,11 @@ export function registerSideAIPane(): false | string {
       const copyButton = body.querySelector(
         "[data-sideai-role='copy-button']"
       ) as HTMLButtonElement | null;
+      const saveButton = body.querySelector(
+        "[data-sideai-role='save-settings-button']"
+      ) as HTMLButtonElement | null;
+
+      syncSavedApiKey(body);
 
       sendButton?.addEventListener("click", () => {
         void sendCurrentPreview(body);
@@ -503,6 +556,10 @@ export function registerSideAIPane(): false | string {
 
       copyButton?.addEventListener("click", () => {
         copyOutput(body);
+      });
+
+      saveButton?.addEventListener("click", () => {
+        persistApiKey(body);
       });
     },
     onItemChange: ({ item, setEnabled, tabType }) => {

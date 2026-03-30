@@ -109,7 +109,7 @@ docs/
 
 ### Phase 4：设置与持久化
 
-- [ ] 保存 API Key
+- [x] 保存 API Key
 - [ ] 保存 `baseURL`
 - [ ] 保存模型名
 - [ ] 保存固定提示词
