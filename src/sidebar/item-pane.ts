@@ -12,6 +12,10 @@ function applyPaneLayout(body: HTMLDivElement): void {
   const buttons = body.querySelectorAll("button");
   const state = body.querySelector(".sideai-pane-state") as HTMLDivElement | null;
   const title = body.querySelector(".sideai-pane-title") as HTMLDivElement | null;
+  const configGrid = body.querySelector(".sideai-config-grid") as HTMLDivElement | null;
+  const configRows = body.querySelectorAll(".sideai-config-row");
+  const labels = body.querySelectorAll(".sideai-config-label");
+  const inputs = body.querySelectorAll(".sideai-config-input");
 
   if (root) {
     root.style.display = "flex";
@@ -101,6 +105,37 @@ function applyPaneLayout(body: HTMLDivElement): void {
     element.style.whiteSpace = "nowrap";
     element.style.overflow = "hidden";
     element.style.textOverflow = "ellipsis";
+  });
+
+  if (configGrid) {
+    configGrid.style.display = "flex";
+    configGrid.style.flexDirection = "column";
+    configGrid.style.gap = "8px";
+    configGrid.style.width = "100%";
+  }
+
+  configRows.forEach((row: Element) => {
+    const element = row as HTMLDivElement;
+    element.style.display = "flex";
+    element.style.flexDirection = "column";
+    element.style.gap = "4px";
+    element.style.minWidth = "0";
+  });
+
+  labels.forEach((label: Element) => {
+    const element = label as HTMLLabelElement;
+    element.style.fontSize = "12px";
+    element.style.fontWeight = "600";
+    element.style.overflowWrap = "anywhere";
+  });
+
+  inputs.forEach((input: Element) => {
+    const element = input as HTMLInputElement;
+    element.style.width = "100%";
+    element.style.minWidth = "0";
+    element.style.boxSizing = "border-box";
+    element.style.padding = "6px 8px";
+    element.style.borderRadius = "6px";
   });
 }
 
@@ -193,7 +228,7 @@ function renderPane(body: HTMLDivElement, item?: Zotero.Item): void {
 
   if (configSummaryElement) {
     configSummaryElement.textContent =
-      "API Key, baseURL, model, and fixed prompt will live here.";
+      "Model settings UI is ready. Persistence will be added next.";
   }
 
   if (contextPreviewElement) {
@@ -261,7 +296,42 @@ export function registerSideAIPane(): false | string {
         <html:div class="sideai-pane-state" data-sideai-role="panel-state">Loading...</html:div>
         <html:div class="sideai-pane-section">
           <html:div class="sideai-pane-label">Configuration</html:div>
-          <html:div class="sideai-pane-card" data-sideai-role="config-summary"></html:div>
+          <html:div class="sideai-pane-card">
+            <html:div class="sideai-config-grid">
+              <html:div class="sideai-config-row">
+                <html:label class="sideai-config-label" for="sideai-baseurl">Base URL</html:label>
+                <html:input
+                  id="sideai-baseurl"
+                  class="sideai-config-input"
+                  type="text"
+                  value="https://api.openai.com/v1"
+                />
+              </html:div>
+              <html:div class="sideai-config-row">
+                <html:label class="sideai-config-label" for="sideai-model">Model</html:label>
+                <html:input
+                  id="sideai-model"
+                  class="sideai-config-input"
+                  type="text"
+                  value="gpt-4.1-mini"
+                />
+              </html:div>
+              <html:div class="sideai-config-row">
+                <html:label class="sideai-config-label" for="sideai-apikey">API Key</html:label>
+                <html:input
+                  id="sideai-apikey"
+                  class="sideai-config-input"
+                  type="password"
+                  value=""
+                  placeholder="sk-..."
+                />
+              </html:div>
+              <html:div class="sideai-pane-actions">
+                <html:button disabled="true">Save Settings</html:button>
+              </html:div>
+              <html:div class="sideai-pane-muted" data-sideai-role="config-summary"></html:div>
+            </html:div>
+          </html:div>
         </html:div>
         <html:div class="sideai-pane-section">
           <html:div class="sideai-pane-label">Context</html:div>
