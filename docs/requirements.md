@@ -63,3 +63,96 @@ Notes:
 - 缺失标题、摘要或 note 时不会报错
 - 完全没有可用文本时，插件不会发送空请求
 - 后续开发统一以此文档作为 MVP 的“当前文本”定义
+
+## 接口协议决策
+
+MVP 第一版固定采用 `OpenAI Chat Completions` 兼容协议发送请求。
+
+第一版请求目标：
+
+- 支持可配置 `baseURL`
+- 支持可配置模型名
+- 支持 `Authorization: Bearer <API_KEY>`
+- 请求体使用 `messages` 结构
+- 返回结果优先从 `choices[0].message.content` 读取
+
+第一版不纳入范围：
+
+- OpenAI `Responses API`
+- 多协议自动探测
+- 流式 SSE 渲染
+- 非 OpenAI 兼容的私有协议适配
+
+## 请求格式约定
+
+请求方法：
+
+- `POST`
+
+请求路径：
+
+- `<baseURL>/chat/completions`
+
+请求头：
+
+```text
+Content-Type: application/json
+Authorization: Bearer <API_KEY>
+```
+
+请求体最小结构：
+
+```json
+{
+  "model": "<model>",
+  "messages": [
+    {
+      "role": "system",
+      "content": "<fixed prompt>"
+    },
+    {
+      "role": "user",
+      "content": "<current text>"
+    }
+  ]
+}
+```
+
+响应读取规则：
+
+- 成功时读取 `choices[0].message.content`
+- 如果 `choices` 为空，则视为协议错误
+- 如果 HTTP 非 2xx，则显示服务端状态码和错误消息
+- 如果返回体不是预期 JSON，则显示“响应格式不兼容”
+
+## 选择这个协议的原因
+
+- 大多数支持自定义 `baseURL` 的 AI 服务都兼容该格式
+- 与你当前“固定提示词 + 当前文本上传”的场景匹配度最高
+- 结构简单，便于 Zotero 插件内先做稳定闭环
+- 后续如要扩展 `Responses API`，可以在现有 `api` 模块上继续演进
+
+## 实现边界
+
+第一版只保证以下能力：
+
+- 手动点击发送一次请求
+- 发送固定提示词和当前文本
+- 展示一次完整响应或报错
+
+第一版不保证：
+
+- 多轮上下文记忆
+- 工具调用
+- 图片输入
+- 流式增量输出
+- 自动重试与请求队列
+
+## 协议验收标准
+
+满足以下条件即可认为该项完成：
+
+- 文档中已明确第一版协议为 `OpenAI Chat Completions` 兼容格式
+- 已明确请求路径、请求头、请求体和响应读取规则
+- 已明确不在第一版范围内的协议能力
+- 后续实现统一以此协议约定为准
