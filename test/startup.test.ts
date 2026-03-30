@@ -183,6 +183,46 @@ describe("startup", function () {
     );
   });
 
+  it("should tolerate empty text fields when building preview content", function () {
+    assert.strictEqual(
+      buildPreviewTextFromContext({
+        abstractText: "",
+        notesText: "",
+        title: "Untitled item"
+      }),
+      ""
+    );
+
+    assert.strictEqual(
+      buildPreviewTextFromContext({
+        abstractText: "",
+        notesText: "Only note text",
+        title: "Paper title"
+      }),
+      ["Title:", "Paper title", "", "Notes:", "Only note text"].join("\n")
+    );
+
+    assert.strictEqual(mergeNotePreviewTexts(["", "   ", "<p></p>"]), "");
+  });
+
+  it("should sanitize abnormal html-like note text into safe preview text", function () {
+    assert.strictEqual(
+      stripHtml(
+        '<div>Alpha<script>alert("x")</script><style>.x{}</style><b>Beta</b></div>'
+      ),
+      'Alpha alert("x") .x{} Beta'
+    );
+
+    assert.strictEqual(
+      mergeNotePreviewTexts([
+        '<div>Line&nbsp;One</div>',
+        '<p>Line <img src="x" />Two</p>',
+        "<script>console.log('bad')</script>"
+      ]),
+      "Line&nbsp;One\n\nLine Two\n\nconsole.log('bad')"
+    );
+  });
+
   it("should build unified preview text from context object", function () {
     assert.strictEqual(
       buildPreviewTextFromContext({
