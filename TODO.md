@@ -189,7 +189,7 @@ docs/
 
 建议第一版只支持一种协议：
 
-- [ ] OpenAI Chat Completions 兼容接口
+- [x] OpenAI Chat Completions 兼容接口
 
 后续再扩展：
 

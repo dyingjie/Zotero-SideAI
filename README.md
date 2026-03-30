@@ -147,6 +147,7 @@ src/
 - 当前请求服务已支持超时控制，并通过 `AbortSignal` 终止请求
 - 当前请求服务已统一处理超时、网络异常和 HTTP 非 2xx 错误
 - 当前请求服务已支持解析 OpenAI Chat Completions 兼容响应
+- 当前 AI 请求服务当前仅实现 OpenAI Chat Completions 兼容接口
 - 当前 `Send` 按钮已接入 mock 发送流程，可驱动 loading 和输出占位结果
 - 当前响应结果区域已包含结果标题、状态标记和独立输出容器
 - 后续会在这个面板里继续接入设置、上下文预览和发送按钮
