@@ -31,6 +31,7 @@ import {
   stripHtml
 } from "../src/sidebar/context-preview";
 import {
+  createSystemPromptMessage,
   createChatCompletionsRequestBody
 } from "../src/services/chat-completions";
 
@@ -192,6 +193,13 @@ describe("startup", function () {
         model: "gpt-4.1-mini"
       }
     );
+  });
+
+  it("should place fixed prompt into system message", function () {
+    assert.deepEqual(createSystemPromptMessage("  You are a helper.  "), {
+      content: "You are a helper.",
+      role: "system"
+    });
   });
 
   it("should clean plugin instance on shutdown", async function () {

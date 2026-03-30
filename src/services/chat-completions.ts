@@ -10,6 +10,15 @@ export type ChatCompletionsRequestBody = {
   model: string;
 };
 
+export function createSystemPromptMessage(
+  systemPrompt: string
+): ChatCompletionMessage {
+  return {
+    content: systemPrompt.trim(),
+    role: "system"
+  };
+}
+
 export function createChatCompletionsRequestBody(input: {
   messages: ChatCompletionMessage[];
   model: string;
