@@ -10,6 +10,16 @@ type SetTimeoutFn = (
   delay: number
 ) => ReturnType<typeof setTimeout>;
 
+export class AIRequestError extends Error {
+  public status?: number;
+
+  constructor(message: string, options?: { status?: number }) {
+    super(message);
+    this.name = "AIRequestError";
+    this.status = options?.status;
+  }
+}
+
 export function buildChatCompletionsEndpoint(baseUrl: string): string {
   return `${baseUrl.trim().replace(/\/+$/, "")}/chat/completions`;
 }
@@ -61,15 +71,19 @@ export async function postChatCompletionsRequest(input: {
   });
 
   try {
-    return await fetchFn(endpoint, {
-      body: JSON.stringify(input.body),
-      headers: {
-        Authorization: `Bearer ${input.apiKey.trim()}`,
-        "Content-Type": "application/json"
-      },
-      method: "POST",
-      signal: timeout.signal
-    });
+    try {
+      return await fetchFn(endpoint, {
+        body: JSON.stringify(input.body),
+        headers: {
+          Authorization: `Bearer ${input.apiKey.trim()}`,
+          "Content-Type": "application/json"
+        },
+        method: "POST",
+        signal: timeout.signal
+      });
+    } catch (error) {
+      throw normalizeAIRequestError(error);
+    }
   } finally {
     timeout.cleanup();
   }
@@ -96,5 +110,31 @@ export async function postChatCompletionsMessages(input: {
     fetchFn: input.fetchFn,
     setTimeoutFn: input.setTimeoutFn,
     timeoutMs: input.timeoutMs
+  });
+}
+
+export function normalizeAIRequestError(error: unknown): AIRequestError {
+  if (error instanceof AIRequestError) {
+    return error;
+  }
+
+  if (error instanceof Error && error.name === "AbortError") {
+    return new AIRequestError("Request timed out.");
+  }
+
+  if (error instanceof Error && error.message.trim()) {
+    return new AIRequestError(error.message.trim());
+  }
+
+  return new AIRequestError("Request failed.");
+}
+
+export function ensureSuccessfulResponse(response: Response): Response {
+  if (response.ok) {
+    return response;
+  }
+
+  throw new AIRequestError(`Request failed with status ${response.status}.`, {
+    status: response.status
   });
 }

@@ -41,8 +41,11 @@ import {
   formatPreviewMessages
 } from "../src/services/request-preview";
 import {
+  AIRequestError,
   buildChatCompletionsEndpoint,
   createTimeoutSignal,
+  ensureSuccessfulResponse,
+  normalizeAIRequestError,
   postChatCompletionsMessages,
   postChatCompletionsRequest
 } from "../src/services/ai-request";
@@ -407,6 +410,38 @@ describe("startup", function () {
 
     assert.strictEqual(receivedSignal instanceof AbortSignal, true);
     assert.strictEqual(clearedTimeoutId, 456 as ReturnType<typeof setTimeout>);
+  });
+
+  it("should normalize request failures and http errors", function () {
+    const timeoutError = normalizeAIRequestError(
+      Object.assign(new Error("The operation was aborted."), {
+        name: "AbortError"
+      })
+    );
+    assert.instanceOf(timeoutError, AIRequestError);
+    assert.strictEqual(timeoutError.message, "Request timed out.");
+
+    const networkError = normalizeAIRequestError(new Error("Network down."));
+    assert.strictEqual(networkError.message, "Network down.");
+
+    const response = {
+      ok: false,
+      status: 503
+    } as Response;
+
+    let thrownError: unknown;
+    try {
+      ensureSuccessfulResponse(response);
+    } catch (error) {
+      thrownError = error;
+    }
+
+    assert.instanceOf(thrownError, AIRequestError);
+    assert.strictEqual(
+      (thrownError as AIRequestError).message,
+      "Request failed with status 503."
+    );
+    assert.strictEqual((thrownError as AIRequestError).status, 503);
   });
 
   it("should clean plugin instance on shutdown", async function () {
