@@ -257,6 +257,70 @@ You are an academic reading assistant. Summarize the selected paper content clea
 - 当前主要在 Windows + Zotero 8 环境完成验证，macOS 和不同窗口尺寸还需要继续补测
 - 当前不会自动把结果写回 Zotero 条目、笔记或附件
 
+## 开发调试说明
+
+当前仓库常用的开发命令如下：
+
+```powershell
+npm run start
+npm run build
+npm test
+npm run lint:check
+npm run lint:fix
+```
+
+### `npm run start`
+
+- 用于开发态启动和热重载
+- 会调用 `zotero-plugin serve`
+- 会自动构建并把插件安装为 Zotero temporary add-on
+
+推荐先设置：
+
+```powershell
+$env:ZOTERO_PLUGIN_ZOTERO_BIN_PATH='C:\Program Files\Zotero\zotero.exe'
+```
+
+开发态下通常可以关注这些信号：
+
+- `Server Ready!`
+- `.scaffold/build/addon` 被安装为 temporary add-on
+- 文件变更后出现 `changed`
+- 随后出现 `Reloading...`
+
+### `npm run build`
+
+- 用于生成当前构建产物
+- 会先执行 `zotero-plugin build`
+- 然后执行 `tsc --noEmit` 做 TypeScript 类型检查
+
+适合在提交前快速确认：
+
+- 构建是否成功
+- 类型是否有回归
+
+### `npm test`
+
+- 用于在 Zotero 8 测试环境中运行当前测试集
+- 会构建插件、启动测试资源并执行现有测试
+- 当前是最推荐的主流程回归入口
+
+### `npm run lint:check` / `npm run lint:fix`
+
+- 基于 Prettier 检查或修复格式
+- 适合在整理文档和调整 UI 文本后快速统一风格
+
+### 调试建议
+
+- 如果插件没有显示，先确认 `ZOTERO_PLUGIN_ZOTERO_BIN_PATH` 是否指向本机真实 Zotero 8 路径
+- 如果请求失败，先检查侧边栏里的 `Base URL` 是否只填到 `/v1`
+- 如果看不到结果，先确认当前条目是否真的有标题、摘要或 note 可发送
+- 如果怀疑改动没有生效，优先重新执行 `npm run start` 或 `npm test`
+
+更详细的开发约定、主流程验证记录和风格约定见：
+
+- [docs/development.md](docs/development.md)
+
 ## 当前仓库状态
 
 当前仓库主要包含：
