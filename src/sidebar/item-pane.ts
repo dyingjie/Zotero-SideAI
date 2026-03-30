@@ -20,6 +20,7 @@ import {
   getMissingConfigFields,
   getMissingConfigMessage
 } from "./send-validation";
+import { mergeNotePreviewTexts } from "./context-preview";
 
 const SIDEBAR_PANE_ID = "sideai-panel";
 
@@ -228,13 +229,6 @@ function getItemTitle(item?: Zotero.Item): string {
     : "Untitled item";
 }
 
-function stripHtml(html: string): string {
-  return html
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
 function buildCurrentTextPreview(item?: Zotero.Item): string {
   if (!item) {
     return "No current text available.";
@@ -255,11 +249,9 @@ function buildCurrentTextPreview(item?: Zotero.Item): string {
     typeof item.getNotes === "function" ? (item.getNotes() as number[]) : [];
   if (noteIDs.length) {
     const noteItems = Zotero.Items.get(noteIDs) as Zotero.Item[];
-    const notePreview = noteItems
-      .map((noteItem) => stripHtml(noteItem.getNote?.() || ""))
-      .filter(Boolean)
-      .slice(0, 2)
-      .join("\n\n");
+    const notePreview = mergeNotePreviewTexts(
+      noteItems.map((noteItem) => noteItem.getNote?.() || "")
+    );
 
     if (notePreview) {
       sections.push(`Notes:\n${notePreview}`);

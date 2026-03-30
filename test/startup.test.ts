@@ -25,6 +25,10 @@ import {
   getMissingConfigFields,
   getMissingConfigMessage
 } from "../src/sidebar/send-validation";
+import {
+  mergeNotePreviewTexts,
+  stripHtml
+} from "../src/sidebar/context-preview";
 
 describe("startup", function () {
   it("should register plugin instance on Zotero", function () {
@@ -129,6 +133,19 @@ describe("startup", function () {
     assert.strictEqual(
       getMissingConfigMessage(["Base URL", "Model", "API Key"]),
       "Please complete required settings before sending: Base URL, Model, API Key."
+    );
+  });
+
+  it("should merge all note contents into preview text", function () {
+    assert.strictEqual(stripHtml("<p>Hello <b>world</b></p>"), "Hello world");
+    assert.strictEqual(
+      mergeNotePreviewTexts([
+        "<p>First note</p>",
+        "",
+        "<div>Second <i>note</i></div>",
+        "<p>Third note</p>"
+      ]),
+      "First note\n\nSecond note\n\nThird note"
     );
   });
 
