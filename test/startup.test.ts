@@ -13,4 +13,16 @@ describe("startup", function () {
 
     assert.equal(plugin.data?.initialized, true);
   });
+
+  it("should clean plugin instance on shutdown", async function () {
+    const plugin = Zotero[config.addonInstance] as {
+      data: { alive?: boolean; initialized?: boolean };
+      hooks: { onShutdown: () => Promise<void> };
+    };
+
+    await plugin.hooks.onShutdown();
+
+    assert.strictEqual(plugin.data.alive, false);
+    assert.strictEqual(plugin.data.initialized, false);
+  });
 });

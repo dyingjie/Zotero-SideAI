@@ -23,9 +23,12 @@ async function onMainWindowUnload(win: Window): Promise<void> {
 
 async function onShutdown(): Promise<void> {
   log("Plugin shutdown completed.");
+  const addonInstance = addon.data.config.addonInstance;
+  addon.data.initialized = false;
   addon.data.alive = false;
+  delete (_globalThis as Record<string, unknown>).addon;
   // @ts-expect-error Zotero plugin instance is attached dynamically.
-  delete Zotero[addon.data.config.addonInstance];
+  delete Zotero[addonInstance];
 }
 
 async function onNotify(

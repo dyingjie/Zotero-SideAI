@@ -163,6 +163,7 @@ npm test
 
 - 插件实例已注册到 `Zotero.SideAI`
 - 启动阶段已将 `initialized` 标记设为 `true`
+- `shutdown` 后会清理插件状态与实例引用
 
 ## 当前最值得先完成的文件
 
