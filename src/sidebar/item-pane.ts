@@ -572,6 +572,20 @@ function copyOutput(body: HTMLDivElement): void {
   }
 }
 
+function clearOutput(body: HTMLDivElement): void {
+  const outputPreviewElement = body.querySelector(
+    "[data-sideai-role='output-preview']"
+  ) as HTMLDivElement | null;
+
+  if (outputPreviewElement) {
+    outputPreviewElement.textContent =
+      "AI response output will appear in this area after sending a request.";
+  }
+
+  setActionStatus(body, "Current session output cleared.");
+  setPaneState(body, "ready");
+}
+
 async function sendCurrentPreview(body: HTMLDivElement): Promise<void> {
   const baseUrlInput = getBaseUrlInput(body);
   const modelInput = getModelInput(body);
@@ -737,7 +751,7 @@ export function registerSideAIPane(): false | string {
           <html:div class="sideai-pane-actions">
             <html:button data-sideai-role="send-button" disabled="true">Send</html:button>
             <html:button data-sideai-role="copy-button" disabled="true">Copy</html:button>
-            <html:button disabled="true">Clear</html:button>
+            <html:button data-sideai-role="clear-button">Clear</html:button>
           </html:div>
           <html:div class="sideai-pane-muted" data-sideai-role="action-status"></html:div>
         </html:div>
@@ -758,6 +772,9 @@ export function registerSideAIPane(): false | string {
       const resetButton = body.querySelector(
         "[data-sideai-role='reset-settings-button']"
       ) as HTMLButtonElement | null;
+      const clearButton = body.querySelector(
+        "[data-sideai-role='clear-button']"
+      ) as HTMLButtonElement | null;
 
       syncSavedSettings(body);
 
@@ -775,6 +792,10 @@ export function registerSideAIPane(): false | string {
 
       resetButton?.addEventListener("click", () => {
         restoreDefaultSettings(body);
+      });
+
+      clearButton?.addEventListener("click", () => {
+        clearOutput(body);
       });
     },
     onItemChange: ({ item, setEnabled, tabType }) => {

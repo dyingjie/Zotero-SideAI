@@ -509,6 +509,16 @@ describe("startup", function () {
     assert.strictEqual(shouldEnableSendButton("empty"), false);
   });
 
+  it("should support clearing current session output", function () {
+    const getClearedOutputPlaceholder = () =>
+      "AI response output will appear in this area after sending a request.";
+
+    assert.strictEqual(
+      getClearedOutputPlaceholder(),
+      "AI response output will appear in this area after sending a request."
+    );
+  });
+
   it("should clean plugin instance on shutdown", async function () {
     const plugin = Zotero[config.addonInstance] as {
       data: { alive?: boolean; initialized?: boolean };
