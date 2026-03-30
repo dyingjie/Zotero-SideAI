@@ -332,6 +332,40 @@ function copyOutput(body: HTMLDivElement): void {
   }
 }
 
+async function sendCurrentPreview(body: HTMLDivElement): Promise<void> {
+  const contextPreviewElement = body.querySelector(
+    "[data-sideai-role='context-preview']"
+  ) as HTMLDivElement | null;
+  const outputPreviewElement = body.querySelector(
+    "[data-sideai-role='output-preview']"
+  ) as HTMLDivElement | null;
+
+  const currentText = contextPreviewElement?.textContent?.trim() || "";
+  if (!currentText || currentText === "No current text available.") {
+    setPaneState(body, "error", "No current text available to send.");
+    return;
+  }
+
+  setPaneState(body, "loading");
+  if (outputPreviewElement) {
+    outputPreviewElement.textContent = "Generating preview response...";
+  }
+
+  await Zotero.Promise.delay(400);
+
+  if (outputPreviewElement) {
+    outputPreviewElement.textContent = [
+      "Mock response",
+      "",
+      "This is a placeholder send action.",
+      "Current text has been collected successfully.",
+      "The real API request will be connected in the next phase."
+    ].join("\n");
+  }
+
+  setPaneState(body, "ready");
+}
+
 export function registerSideAIPane(): false | string {
   if (registeredPaneKey) {
     return registeredPaneKey;
@@ -422,9 +456,16 @@ export function registerSideAIPane(): false | string {
     onInit: ({ body }) => {
       applyPaneLayout(body);
 
+      const sendButton = body.querySelector(
+        "[data-sideai-role='send-button']"
+      ) as HTMLButtonElement | null;
       const copyButton = body.querySelector(
         "[data-sideai-role='copy-button']"
       ) as HTMLButtonElement | null;
+
+      sendButton?.addEventListener("click", () => {
+        void sendCurrentPreview(body);
+      });
 
       copyButton?.addEventListener("click", () => {
         copyOutput(body);
