@@ -5,6 +5,9 @@ export function stripHtml(html: string): string {
     .trim();
 }
 
+export const MAX_CONTEXT_PREVIEW_LENGTH = 6000;
+export const TRUNCATED_PREVIEW_SUFFIX = "\n\n[Truncated for sending]";
+
 export type CurrentTextContext = {
   abstractText: string;
   notesText: string;
@@ -17,6 +20,24 @@ export function mergeNotePreviewTexts(noteContents: string[]): string {
     .map((content) => stripHtml(content))
     .filter(Boolean)
     .join("\n\n");
+}
+
+export function truncatePreviewText(
+  text: string,
+  maxLength: number = MAX_CONTEXT_PREVIEW_LENGTH
+): string {
+  const normalized = text.trim();
+
+  if (!normalized) {
+    return "";
+  }
+
+  if (normalized.length <= maxLength) {
+    return normalized;
+  }
+
+  const targetLength = Math.max(0, maxLength - TRUNCATED_PREVIEW_SUFFIX.length);
+  return `${normalized.slice(0, targetLength).trimEnd()}${TRUNCATED_PREVIEW_SUFFIX}`;
 }
 
 export function buildPreviewTextFromContext(context: {
@@ -38,5 +59,5 @@ export function buildPreviewTextFromContext(context: {
     sections.push(`Notes:\n${context.notesText}`);
   }
 
-  return sections.join("\n\n");
+  return truncatePreviewText(sections.join("\n\n"));
 }

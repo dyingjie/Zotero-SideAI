@@ -26,9 +26,12 @@ import {
   getMissingConfigMessage
 } from "../src/sidebar/send-validation";
 import {
+  MAX_CONTEXT_PREVIEW_LENGTH,
+  TRUNCATED_PREVIEW_SUFFIX,
   buildPreviewTextFromContext,
   mergeNotePreviewTexts,
-  stripHtml
+  stripHtml,
+  truncatePreviewText
 } from "../src/sidebar/context-preview";
 import {
   appendHistoryEntry,
@@ -243,6 +246,24 @@ describe("startup", function () {
         "Note two"
       ].join("\n")
     );
+  });
+
+  it("should truncate overly long preview text before sending", function () {
+    const longText = "A".repeat(MAX_CONTEXT_PREVIEW_LENGTH + 120);
+    const truncatedText = truncatePreviewText(longText);
+
+    assert.strictEqual(truncatedText.length, MAX_CONTEXT_PREVIEW_LENGTH);
+    assert.strictEqual(truncatedText.endsWith(TRUNCATED_PREVIEW_SUFFIX), true);
+
+    const previewText = buildPreviewTextFromContext({
+      abstractText: "B".repeat(MAX_CONTEXT_PREVIEW_LENGTH + 120),
+      notesText: "",
+      title: "Paper title"
+    });
+
+    assert.strictEqual(previewText.length, MAX_CONTEXT_PREVIEW_LENGTH);
+    assert.strictEqual(previewText.includes("Title:\nPaper title"), true);
+    assert.strictEqual(previewText.endsWith(TRUNCATED_PREVIEW_SUFFIX), true);
   });
 
   it("should define chat completions request body structure", function () {
