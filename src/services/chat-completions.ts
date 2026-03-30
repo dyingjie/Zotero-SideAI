@@ -19,6 +19,21 @@ export function createSystemPromptMessage(
   };
 }
 
+export function createUserContextMessage(input: {
+  currentText: string;
+  taskInstruction?: string;
+}): ChatCompletionMessage {
+  const taskInstruction = input.taskInstruction?.trim() || "";
+  const currentText = input.currentText.trim();
+
+  return {
+    content: taskInstruction
+      ? `${taskInstruction}\n\n${currentText}`
+      : currentText,
+    role: "user"
+  };
+}
+
 export function createChatCompletionsRequestBody(input: {
   messages: ChatCompletionMessage[];
   model: string;

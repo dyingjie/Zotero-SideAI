@@ -31,6 +31,7 @@ import {
   stripHtml
 } from "../src/sidebar/context-preview";
 import {
+  createUserContextMessage,
   createSystemPromptMessage,
   createChatCompletionsRequestBody
 } from "../src/services/chat-completions";
@@ -200,6 +201,20 @@ describe("startup", function () {
       content: "You are a helper.",
       role: "system"
     });
+  });
+
+  it("should place current text into user message", function () {
+    assert.deepEqual(
+      createUserContextMessage({
+        currentText: "Title:\nPaper\n\nAbstract:\nSummary",
+        taskInstruction: "Please analyze the following paper."
+      }),
+      {
+        content:
+          "Please analyze the following paper.\n\nTitle:\nPaper\n\nAbstract:\nSummary",
+        role: "user"
+      }
+    );
   });
 
   it("should clean plugin instance on shutdown", async function () {
