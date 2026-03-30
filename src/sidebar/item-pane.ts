@@ -39,6 +39,10 @@ let registeredPaneKey: false | string = false;
 const paneContextStore = new WeakMap<HTMLDivElement, CurrentTextContext>();
 type PaneState = "empty" | "ready" | "loading" | "error";
 
+function shouldEnableSendButton(state: PaneState): boolean {
+  return state !== "empty" && state !== "loading";
+}
+
 function applyPaneLayout(body: HTMLDivElement): void {
   const root = body.querySelector(".sideai-pane-root") as HTMLDivElement | null;
   const cards = body.querySelectorAll(".sideai-pane-card");
@@ -344,7 +348,7 @@ function setPaneState(
   }
 
   if (sendButton) {
-    sendButton.disabled = state !== "ready";
+    sendButton.disabled = !shouldEnableSendButton(state);
   }
 
   if (copyButton) {

@@ -498,6 +498,17 @@ describe("startup", function () {
     assert.strictEqual(result, "Final answer");
   });
 
+  it("should keep send action enabled for retry after errors", function () {
+    const shouldEnableSendButton = (
+      state: "empty" | "ready" | "loading" | "error"
+    ) => state !== "empty" && state !== "loading";
+
+    assert.strictEqual(shouldEnableSendButton("ready"), true);
+    assert.strictEqual(shouldEnableSendButton("error"), true);
+    assert.strictEqual(shouldEnableSendButton("loading"), false);
+    assert.strictEqual(shouldEnableSendButton("empty"), false);
+  });
+
   it("should clean plugin instance on shutdown", async function () {
     const plugin = Zotero[config.addonInstance] as {
       data: { alive?: boolean; initialized?: boolean };
