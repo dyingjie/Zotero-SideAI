@@ -449,6 +449,35 @@ describe("startup", function () {
     );
   });
 
+  it("should surface authentication failures for invalid API keys", async function () {
+    let thrownError: unknown;
+
+    try {
+      const response = await postChatCompletionsMessages({
+        apiKey: "sk-invalid",
+        baseUrl: "https://example.com/v1",
+        messages: [{ role: "user", content: "Hello" }],
+        model: "gpt-4.1-mini",
+        fetchFn: async () =>
+          ({
+            ok: false,
+            status: 401
+          }) as Response
+      });
+
+      ensureSuccessfulResponse(response);
+    } catch (error) {
+      thrownError = error;
+    }
+
+    assert.instanceOf(thrownError, AIRequestError);
+    assert.strictEqual(
+      (thrownError as AIRequestError).message,
+      "Request failed with status 401."
+    );
+    assert.strictEqual((thrownError as AIRequestError).status, 401);
+  });
+
   it("should send custom model name through request service", async function () {
     let capturedBody = "";
 
