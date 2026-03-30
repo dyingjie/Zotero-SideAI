@@ -90,6 +90,7 @@
 - `TODO.md`：按阶段拆分的开发清单
 - `docs/requirements.md`：MVP 需求与关键决策
 - `docs/structure.md`：项目目录结构说明
+- `docs/development.md`：开发说明文档
 
 当前目录骨架：
 
