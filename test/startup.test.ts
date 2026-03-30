@@ -42,6 +42,7 @@ import {
 } from "../src/services/request-preview";
 import {
   buildChatCompletionsEndpoint,
+  createTimeoutSignal,
   postChatCompletionsMessages,
   postChatCompletionsRequest
 } from "../src/services/ai-request";
@@ -328,7 +329,8 @@ describe("startup", function () {
         Authorization: "Bearer sk-test",
         "Content-Type": "application/json"
       },
-      method: "POST"
+      method: "POST",
+      signal: undefined
     });
   });
 
@@ -364,6 +366,47 @@ describe("startup", function () {
         model: "custom-model-name"
       })
     );
+  });
+
+  it("should support timeout control for request service", async function () {
+    let clearedTimeoutId: ReturnType<typeof setTimeout> | undefined;
+    let receivedSignal: AbortSignal | undefined;
+
+    const timeout = createTimeoutSignal({
+      setTimeoutFn: (callback, _delay) => {
+        callback();
+        return 123 as ReturnType<typeof setTimeout>;
+      },
+      clearTimeoutFn: (timeoutId) => {
+        clearedTimeoutId = timeoutId;
+      },
+      timeoutMs: 5000
+    });
+
+    assert.strictEqual(timeout.signal?.aborted, true);
+    timeout.cleanup();
+    assert.strictEqual(clearedTimeoutId, 123 as ReturnType<typeof setTimeout>);
+
+    await postChatCompletionsRequest({
+      apiKey: "sk-test",
+      baseUrl: "https://example.com/v1",
+      body: {
+        messages: [{ role: "user", content: "Hello" }],
+        model: "gpt-4.1-mini"
+      },
+      timeoutMs: 5000,
+      setTimeoutFn: (_callback, _delay) => 456 as ReturnType<typeof setTimeout>,
+      clearTimeoutFn: (timeoutId) => {
+        clearedTimeoutId = timeoutId;
+      },
+      fetchFn: async (_url, options) => {
+        receivedSignal = options?.signal as AbortSignal | undefined;
+        return { ok: true } as Response;
+      }
+    });
+
+    assert.strictEqual(receivedSignal instanceof AbortSignal, true);
+    assert.strictEqual(clearedTimeoutId, 456 as ReturnType<typeof setTimeout>);
   });
 
   it("should clean plugin instance on shutdown", async function () {
