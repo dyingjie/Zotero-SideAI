@@ -241,6 +241,22 @@ You are an academic reading assistant. Summarize the selected paper content clea
 - 点击 `Restore Defaults` 会恢复默认 `baseURL`、默认模型名和默认固定提示词
 - 如果 `API Key` 为空，发送时会直接提示而不会发请求
 
+## 已知限制
+
+当前版本仍有以下已知限制：
+
+- 当前仅面向 Zotero 8，未承诺兼容更早版本
+- 当前接口只支持 OpenAI Chat Completions 兼容格式，不支持 Responses API
+- 当前只支持手动点击发送，不支持自动发送
+- 当前不支持流式输出，结果会在请求结束后一次性显示
+- 当前文本范围只包含标题、摘要和全部 note，不包含 PDF 全文、选区文本、OCR 或附件全文抽取
+- 当前只提供全局单模板固定提示词，不支持多模板切换
+- 当前历史记录只保留在当前侧边栏会话中，不做跨重启持久化
+- 当前上下文过长时会直接截断，不做分块发送或更复杂的长度调度
+- 当前代码块高亮是轻量实现，不等同于完整 Markdown 渲染器或专业高亮库
+- 当前主要在 Windows + Zotero 8 环境完成验证，macOS 和不同窗口尺寸还需要继续补测
+- 当前不会自动把结果写回 Zotero 条目、笔记或附件
+
 ## 当前仓库状态
 
 当前仓库主要包含：
