@@ -46,6 +46,7 @@ import {
   createTimeoutSignal,
   ensureSuccessfulResponse,
   normalizeAIRequestError,
+  parseChatCompletionsResponse,
   postChatCompletionsMessages,
   postChatCompletionsRequest
 } from "../src/services/ai-request";
@@ -442,6 +443,34 @@ describe("startup", function () {
       "Request failed with status 503."
     );
     assert.strictEqual((thrownError as AIRequestError).status, 503);
+  });
+
+  it("should parse openai-compatible chat completions response", function () {
+    assert.strictEqual(
+      parseChatCompletionsResponse({
+        choices: [
+          {
+            message: {
+              content: "Parsed response text"
+            }
+          }
+        ]
+      }),
+      "Parsed response text"
+    );
+
+    let thrownError: unknown;
+    try {
+      parseChatCompletionsResponse({ choices: [] });
+    } catch (error) {
+      thrownError = error;
+    }
+
+    assert.instanceOf(thrownError, AIRequestError);
+    assert.strictEqual(
+      (thrownError as AIRequestError).message,
+      "Response format is incompatible."
+    );
   });
 
   it("should clean plugin instance on shutdown", async function () {

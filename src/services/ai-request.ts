@@ -138,3 +138,24 @@ export function ensureSuccessfulResponse(response: Response): Response {
     status: response.status
   });
 }
+
+export function parseChatCompletionsResponse(data: unknown): string {
+  if (
+    typeof data !== "object" ||
+    data === null ||
+    !("choices" in data) ||
+    !Array.isArray(data.choices) ||
+    data.choices.length === 0
+  ) {
+    throw new AIRequestError("Response format is incompatible.");
+  }
+
+  const firstChoice = data.choices[0];
+  const content = firstChoice?.message?.content;
+
+  if (typeof content !== "string" || !content.trim()) {
+    throw new AIRequestError("Response format is incompatible.");
+  }
+
+  return content;
+}
