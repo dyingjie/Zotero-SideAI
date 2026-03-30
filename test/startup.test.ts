@@ -30,6 +30,9 @@ import {
   mergeNotePreviewTexts,
   stripHtml
 } from "../src/sidebar/context-preview";
+import {
+  createChatCompletionsRequestBody
+} from "../src/services/chat-completions";
 
 describe("startup", function () {
   it("should register plugin instance on Zotero", function () {
@@ -169,6 +172,25 @@ describe("startup", function () {
         "",
         "Note two"
       ].join("\n")
+    );
+  });
+
+  it("should define chat completions request body structure", function () {
+    assert.deepEqual(
+      createChatCompletionsRequestBody({
+        messages: [
+          { role: "system", content: "System prompt" },
+          { role: "user", content: "User text" }
+        ],
+        model: " gpt-4.1-mini "
+      }),
+      {
+        messages: [
+          { role: "system", content: "System prompt" },
+          { role: "user", content: "User text" }
+        ],
+        model: "gpt-4.1-mini"
+      }
     );
   });
 
