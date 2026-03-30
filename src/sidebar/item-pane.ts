@@ -21,6 +21,10 @@ import {
   getMissingConfigMessage
 } from "./send-validation";
 import {
+  buildPreviewMessages,
+  formatPreviewMessages
+} from "../services/request-preview";
+import {
   buildPreviewTextFromContext,
   type CurrentTextContext,
   mergeNotePreviewTexts
@@ -111,6 +115,9 @@ function applyPaneLayout(body: HTMLDivElement): void {
   const outputPreview = body.querySelector(
     "[data-sideai-role='output-preview']"
   ) as HTMLDivElement | null;
+  const requestPreview = body.querySelector(
+    "[data-sideai-role='request-preview']"
+  ) as HTMLDivElement | null;
 
   if (contextPreview) {
     contextPreview.style.maxHeight = "120px";
@@ -123,6 +130,14 @@ function applyPaneLayout(body: HTMLDivElement): void {
     outputPreview.style.overflowY = "auto";
     outputPreview.style.whiteSpace = "pre-wrap";
     outputPreview.style.overflowWrap = "anywhere";
+  }
+
+  if (requestPreview) {
+    requestPreview.style.minHeight = "84px";
+    requestPreview.style.maxHeight = "180px";
+    requestPreview.style.overflowY = "auto";
+    requestPreview.style.whiteSpace = "pre-wrap";
+    requestPreview.style.overflowWrap = "anywhere";
   }
 
   if (outputBadge) {
@@ -464,11 +479,15 @@ function restoreDefaultSettings(body: HTMLDivElement): void {
 function renderPane(body: HTMLDivElement, item?: Zotero.Item): void {
   applyPaneLayout(body);
 
+  const currentTextContext = buildCurrentTextContext(item);
   const titleElement = body.querySelector(
     "[data-sideai-role='title']"
   ) as HTMLDivElement | null;
   const contextPreviewElement = body.querySelector(
     "[data-sideai-role='context-preview']"
+  ) as HTMLDivElement | null;
+  const requestPreviewElement = body.querySelector(
+    "[data-sideai-role='request-preview']"
   ) as HTMLDivElement | null;
   const outputPreviewElement = body.querySelector(
     "[data-sideai-role='output-preview']"
@@ -491,7 +510,18 @@ function renderPane(body: HTMLDivElement, item?: Zotero.Item): void {
   );
 
   if (contextPreviewElement) {
-    contextPreviewElement.textContent = buildCurrentTextPreview(item);
+    contextPreviewElement.textContent = currentTextContext.previewText;
+  }
+
+  if (requestPreviewElement) {
+    requestPreviewElement.textContent = hasItem
+      ? formatPreviewMessages(
+          buildPreviewMessages({
+            context: currentTextContext,
+            systemPromptTemplate: getSavedSystemPrompt()
+          })
+        )
+      : "Select an item to inspect the final request preview.";
   }
 
   if (outputPreviewElement) {
@@ -656,6 +686,13 @@ export function registerSideAIPane(): false | string {
           <html:div class="sideai-pane-card">
             <html:div class="sideai-pane-title" data-sideai-role="title">Loading...</html:div>
             <html:div class="sideai-pane-muted" data-sideai-role="context-preview"></html:div>
+          </html:div>
+        </html:div>
+        <html:div class="sideai-pane-section">
+          <html:div class="sideai-pane-label">Request Preview</html:div>
+          <html:div class="sideai-pane-card">
+            <html:div class="sideai-pane-label">Final Messages</html:div>
+            <html:div class="sideai-pane-muted" data-sideai-role="request-preview"></html:div>
           </html:div>
         </html:div>
         <html:div class="sideai-pane-section">

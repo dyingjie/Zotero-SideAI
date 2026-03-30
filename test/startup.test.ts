@@ -36,6 +36,10 @@ import {
   createChatCompletionsRequestBody
 } from "../src/services/chat-completions";
 import { renderPromptTemplate } from "../src/services/prompt-template";
+import {
+  buildPreviewMessages,
+  formatPreviewMessages
+} from "../src/services/request-preview";
 
 describe("startup", function () {
   it("should register plugin instance on Zotero", function () {
@@ -241,6 +245,47 @@ describe("startup", function () {
         "Notes: Note body",
         "Current: Unified preview",
         "Unknown: {{missing}}"
+      ].join("\n")
+    );
+  });
+
+  it("should build and format final request preview messages", function () {
+    const messages = buildPreviewMessages({
+      context: {
+        abstractText: "Abstract body",
+        notesText: "Note body",
+        previewText: "Title:\nPaper title\n\nAbstract:\nAbstract body",
+        title: "Paper title"
+      },
+      systemPromptTemplate: "Summarize {{title}} with {{abstractText}}."
+    });
+
+    assert.deepEqual(messages, [
+      {
+        content: "Summarize Paper title with Abstract body.",
+        role: "system"
+      },
+      {
+        content:
+          "Please analyze the following paper.\n\nTitle:\nPaper title\n\nAbstract:\nAbstract body",
+        role: "user"
+      }
+    ]);
+
+    assert.strictEqual(
+      formatPreviewMessages(messages),
+      [
+        "SYSTEM:",
+        "Summarize Paper title with Abstract body.",
+        "",
+        "USER:",
+        "Please analyze the following paper.",
+        "",
+        "Title:",
+        "Paper title",
+        "",
+        "Abstract:",
+        "Abstract body"
       ].join("\n")
     );
   });
