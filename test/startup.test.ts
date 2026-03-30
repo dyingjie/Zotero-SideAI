@@ -21,6 +21,10 @@ import {
   getConfigFailureMessage,
   getConfigSuccessMessage
 } from "../src/sidebar/config-feedback";
+import {
+  getMissingConfigFields,
+  getMissingConfigMessage
+} from "../src/sidebar/send-validation";
 
 describe("startup", function () {
   it("should register plugin instance on Zotero", function () {
@@ -109,6 +113,22 @@ describe("startup", function () {
     assert.strictEqual(
       getConfigSuccessMessage("save"),
       "API Key, Base URL, model, and fixed prompt are saved locally."
+    );
+  });
+
+  it("should block send when required config is empty", function () {
+    assert.deepEqual(
+      getMissingConfigFields({
+        apiKey: "",
+        baseUrl: " ",
+        model: "",
+        systemPrompt: "prompt"
+      }),
+      ["Base URL", "Model", "API Key"]
+    );
+    assert.strictEqual(
+      getMissingConfigMessage(["Base URL", "Model", "API Key"]),
+      "Please complete required settings before sending: Base URL, Model, API Key."
     );
   });
 

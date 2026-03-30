@@ -16,6 +16,10 @@ import {
   getConfigFailureMessage,
   getConfigSuccessMessage
 } from "./config-feedback";
+import {
+  getMissingConfigFields,
+  getMissingConfigMessage
+} from "./send-validation";
 
 const SIDEBAR_PANE_ID = "sideai-panel";
 
@@ -527,12 +531,30 @@ function copyOutput(body: HTMLDivElement): void {
 }
 
 async function sendCurrentPreview(body: HTMLDivElement): Promise<void> {
+  const baseUrlInput = getBaseUrlInput(body);
+  const modelInput = getModelInput(body);
+  const systemPromptInput = getSystemPromptInput(body);
+  const apiKeyInput = getApiKeyInput(body);
   const contextPreviewElement = body.querySelector(
     "[data-sideai-role='context-preview']"
   ) as HTMLDivElement | null;
   const outputPreviewElement = body.querySelector(
     "[data-sideai-role='output-preview']"
   ) as HTMLDivElement | null;
+
+  const missingFields = getMissingConfigFields({
+    apiKey: apiKeyInput?.value || "",
+    baseUrl: baseUrlInput?.value || "",
+    model: modelInput?.value || "",
+    systemPrompt: systemPromptInput?.value || ""
+  });
+
+  if (missingFields.length) {
+    const message = getMissingConfigMessage(missingFields);
+    setConfigFeedback(body, message, "error");
+    setPaneState(body, "error", message);
+    return;
+  }
 
   const currentText = contextPreviewElement?.textContent?.trim() || "";
   if (!currentText || currentText === "No current text available.") {
