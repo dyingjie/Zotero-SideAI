@@ -189,6 +189,58 @@ npm test
 npm run build
 ```
 
+## 配置说明
+
+当前侧边栏配置区主要包含 4 个核心字段：
+
+### `API Key`
+
+- 用于请求你的 OpenAI 兼容服务
+- 不会写死在仓库代码中
+- 由插件保存在本地 Zotero 配置里
+- 为空时会阻止发送
+
+### `Base URL`
+
+- 用于指定兼容接口的服务根地址
+- 当前默认值是 `https://api.openai.com/v1`
+- 插件会自动在后面拼接 `/chat/completions`
+- 因此这里应填写到 `/v1` 为止，而不是完整接口路径
+
+例如：
+
+- 可填写：`https://api.openai.com/v1`
+- 可填写：`http://10.8.133.161:8317/v1`
+- 不要填写：`http://10.8.133.161:8317/v1/chat/completions`
+
+### `Model`
+
+- 用于指定发送时透传给服务端的模型名
+- 当前默认值是 `gpt-4.1-mini`
+- 这里不会做供应商绑定校验，插件会按你填写的值原样发送
+
+### `Fixed Prompt`
+
+- 会作为 `system` 消息参与请求
+- 当前默认值是一段英文的学术阅读助手提示词
+- 支持基础变量替换，例如：
+  - `{{title}}`
+  - `{{abstractText}}`
+  - `{{notesText}}`
+  - `{{currentText}}`
+
+当前固定提示词的默认值为：
+
+```text
+You are an academic reading assistant. Summarize the selected paper content clearly and faithfully.
+```
+
+### 保存与恢复默认值
+
+- 点击 `Save Settings` 会把当前配置保存到本地
+- 点击 `Restore Defaults` 会恢复默认 `baseURL`、默认模型名和默认固定提示词
+- 如果 `API Key` 为空，发送时会直接提示而不会发请求
+
 ## 当前仓库状态
 
 当前仓库主要包含：
