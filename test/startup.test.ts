@@ -35,6 +35,7 @@ import {
   createSystemPromptMessage,
   createChatCompletionsRequestBody
 } from "../src/services/chat-completions";
+import { renderPromptTemplate } from "../src/services/prompt-template";
 
 describe("startup", function () {
   it("should register plugin instance on Zotero", function () {
@@ -214,6 +215,33 @@ describe("startup", function () {
           "Please analyze the following paper.\n\nTitle:\nPaper\n\nAbstract:\nSummary",
         role: "user"
       }
+    );
+  });
+
+  it("should support basic prompt template variables", function () {
+    assert.strictEqual(
+      renderPromptTemplate(
+        [
+          "Title: {{title}}",
+          "Abstract: {{ abstractText }}",
+          "Notes: {{notesText}}",
+          "Current: {{currentText}}",
+          "Unknown: {{missing}}"
+        ].join("\n"),
+        {
+          abstractText: "Abstract body",
+          notesText: "Note body",
+          previewText: "Unified preview",
+          title: "Paper title"
+        }
+      ),
+      [
+        "Title: Paper title",
+        "Abstract: Abstract body",
+        "Notes: Note body",
+        "Current: Unified preview",
+        "Unknown: {{missing}}"
+      ].join("\n")
     );
   });
 
