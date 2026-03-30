@@ -136,6 +136,7 @@
 - [docs/requirements.md](docs/requirements.md)：需求边界与关键决策
 - [docs/structure.md](docs/structure.md)：目录结构说明
 - [docs/development.md](docs/development.md)：开发方式、测试命令与验证记录
+- [docs/release.md](docs/release.md)：首个 release 说明与构建产物信息
 
 ## 安装说明
 
@@ -433,8 +434,6 @@ npm test
 
 接下来优先完成：
 
-- 补充安装说明
-- 补充配置说明
-- 补充已知限制
-- 补充开发调试说明
-- 准备首个 release
+- 根据真实联调情况继续优化 UI 和请求兼容性
+- 在更多平台和窗口尺寸下补充验证
+- 按发布说明生成正式 release 产物
