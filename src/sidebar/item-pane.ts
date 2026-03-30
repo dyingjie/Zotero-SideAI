@@ -1,4 +1,9 @@
 import { getSavedApiKey, saveApiKey } from "../settings/api-key";
+import {
+  getDefaultBaseUrl,
+  getSavedBaseUrl,
+  saveBaseUrl
+} from "../settings/base-url";
 
 const SIDEBAR_PANE_ID = "sideai-panel";
 
@@ -299,6 +304,10 @@ function getApiKeyInput(body: HTMLDivElement): HTMLInputElement | null {
   return body.querySelector("#sideai-apikey") as HTMLInputElement | null;
 }
 
+function getBaseUrlInput(body: HTMLDivElement): HTMLInputElement | null {
+  return body.querySelector("#sideai-baseurl") as HTMLInputElement | null;
+}
+
 function setConfigSummary(body: HTMLDivElement, message: string): void {
   const configSummaryElement = body.querySelector(
     "[data-sideai-role='config-summary']"
@@ -309,8 +318,13 @@ function setConfigSummary(body: HTMLDivElement, message: string): void {
   }
 }
 
-function syncSavedApiKey(body: HTMLDivElement): void {
+function syncSavedSettings(body: HTMLDivElement): void {
+  const baseUrlInput = getBaseUrlInput(body);
   const apiKeyInput = getApiKeyInput(body);
+
+  if (baseUrlInput) {
+    baseUrlInput.value = getSavedBaseUrl();
+  }
 
   if (!apiKeyInput) {
     return;
@@ -319,23 +333,28 @@ function syncSavedApiKey(body: HTMLDivElement): void {
   apiKeyInput.value = getSavedApiKey();
 }
 
-function persistApiKey(body: HTMLDivElement): void {
+function persistSettings(body: HTMLDivElement): void {
+  const baseUrlInput = getBaseUrlInput(body);
   const apiKeyInput = getApiKeyInput(body);
-  if (!apiKeyInput) {
+
+  if (!baseUrlInput || !apiKeyInput) {
     return;
   }
 
   try {
+    saveBaseUrl(baseUrlInput.value);
     saveApiKey(apiKeyInput.value);
     setConfigSummary(
       body,
-      "API Key saved locally. Persistence for other settings will be added next."
+      "API Key and Base URL saved locally. Persistence for other settings will be added next."
     );
   } catch (error) {
     Zotero.logError(
-      error instanceof Error ? error : new Error("Unable to save API Key.")
+      error instanceof Error
+        ? error
+        : new Error("Unable to save plugin settings.")
     );
-    setConfigSummary(body, "Unable to save API Key right now.");
+    setConfigSummary(body, "Unable to save settings right now.");
   }
 }
 
@@ -362,9 +381,9 @@ function renderPane(body: HTMLDivElement, item?: Zotero.Item): void {
 
   if (configSummaryElement) {
     configSummaryElement.textContent =
-      getSavedApiKey()
-        ? "API Key is loaded from local settings. Persistence for other settings is still pending."
-        : "API Key is not saved yet. Other settings persistence will be added later.";
+      getSavedApiKey() || getSavedBaseUrl() !== getDefaultBaseUrl()
+        ? "Saved API Key and Base URL are loaded from local settings. Persistence for other settings is still pending."
+        : "API Key and Base URL are not saved yet. Other settings persistence will be added later.";
   }
 
   if (contextPreviewElement) {
@@ -473,7 +492,7 @@ export function registerSideAIPane(): false | string {
                   id="sideai-baseurl"
                   class="sideai-config-input"
                   type="text"
-                  value="https://api.openai.com/v1"
+                  value="${getDefaultBaseUrl()}"
                 />
               </html:div>
               <html:div class="sideai-config-row">
@@ -503,7 +522,7 @@ export function registerSideAIPane(): false | string {
                 >You are an academic reading assistant. Summarize the selected paper content clearly and faithfully.</html:textarea>
               </html:div>
               <html:div class="sideai-pane-actions">
-                <html:button data-sideai-role="save-settings-button">Save API Key</html:button>
+                <html:button data-sideai-role="save-settings-button">Save Settings</html:button>
               </html:div>
               <html:div class="sideai-pane-muted" data-sideai-role="config-summary"></html:div>
             </html:div>
@@ -548,7 +567,7 @@ export function registerSideAIPane(): false | string {
         "[data-sideai-role='save-settings-button']"
       ) as HTMLButtonElement | null;
 
-      syncSavedApiKey(body);
+      syncSavedSettings(body);
 
       sendButton?.addEventListener("click", () => {
         void sendCurrentPreview(body);
@@ -559,7 +578,7 @@ export function registerSideAIPane(): false | string {
       });
 
       saveButton?.addEventListener("click", () => {
-        persistApiKey(body);
+        persistSettings(body);
       });
     },
     onItemChange: ({ item, setEnabled, tabType }) => {

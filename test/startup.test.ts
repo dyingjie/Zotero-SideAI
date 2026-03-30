@@ -1,6 +1,11 @@
 import { assert } from "chai";
 import { config } from "../package.json";
 import { getSavedApiKey, saveApiKey } from "../src/settings/api-key";
+import {
+  getDefaultBaseUrl,
+  getSavedBaseUrl,
+  saveBaseUrl
+} from "../src/settings/base-url";
 
 describe("startup", function () {
   it("should register plugin instance on Zotero", function () {
@@ -23,6 +28,18 @@ describe("startup", function () {
     saveApiKey("sk-sideai-test");
 
     assert.strictEqual(getSavedApiKey(), "sk-sideai-test");
+
+    Zotero.Prefs.clear(prefKey, true);
+  });
+
+  it("should persist baseURL in Zotero prefs", function () {
+    const prefKey = `${config.prefsPrefix}.baseURL`;
+
+    Zotero.Prefs.clear(prefKey, true);
+    assert.strictEqual(getSavedBaseUrl(), getDefaultBaseUrl());
+
+    saveBaseUrl("https://example.com/v1");
+    assert.strictEqual(getSavedBaseUrl(), "https://example.com/v1");
 
     Zotero.Prefs.clear(prefKey, true);
   });
