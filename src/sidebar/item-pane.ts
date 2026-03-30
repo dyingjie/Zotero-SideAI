@@ -32,6 +32,7 @@ import {
   type CurrentTextContext,
   mergeNotePreviewTexts
 } from "./context-preview";
+import { renderMarkdownPreviewHtml } from "./output-render";
 
 const SIDEBAR_PANE_ID = "sideai-panel";
 
@@ -126,6 +127,9 @@ function applyPaneLayout(body: HTMLDivElement): void {
   const requestPreview = body.querySelector(
     "[data-sideai-role='request-preview']"
   ) as HTMLDivElement | null;
+  const outputParagraphs = body.querySelectorAll(".sideai-output-paragraph");
+  const outputCodeBlocks = body.querySelectorAll(".sideai-output-code");
+  const outputCodeElements = body.querySelectorAll(".sideai-output-code code");
 
   if (contextPreview) {
     contextPreview.style.maxHeight = "120px";
@@ -136,9 +140,31 @@ function applyPaneLayout(body: HTMLDivElement): void {
     outputPreview.style.minHeight = "84px";
     outputPreview.style.maxHeight = "180px";
     outputPreview.style.overflowY = "auto";
-    outputPreview.style.whiteSpace = "pre-wrap";
     outputPreview.style.overflowWrap = "anywhere";
+    outputPreview.style.lineHeight = "1.5";
   }
+
+  outputParagraphs.forEach((paragraph: Element) => {
+    const element = paragraph as HTMLParagraphElement;
+    element.style.margin = "0 0 10px";
+    element.style.whiteSpace = "normal";
+  });
+
+  outputCodeBlocks.forEach((codeBlock: Element) => {
+    const element = codeBlock as HTMLPreElement;
+    element.style.margin = "0";
+    element.style.padding = "8px";
+    element.style.borderRadius = "6px";
+    element.style.overflowX = "auto";
+    element.style.background = "var(--fill-tertiary, rgba(0,0,0,0.08))";
+  });
+
+  outputCodeElements.forEach((codeElement: Element) => {
+    const element = codeElement as HTMLElement;
+    element.style.whiteSpace = "pre";
+    element.style.fontFamily = "monospace";
+    element.style.fontSize = "12px";
+  });
 
   if (requestPreview) {
     requestPreview.style.minHeight = "84px";
@@ -394,6 +420,31 @@ function setActionStatus(body: HTMLDivElement, message: string): void {
   }
 }
 
+function setOutputPreviewContent(
+  body: HTMLDivElement,
+  content: string,
+  mode: "markdown" | "text" = "text"
+): void {
+  const outputPreviewElement = body.querySelector(
+    "[data-sideai-role='output-preview']"
+  ) as HTMLDivElement | null;
+
+  if (!outputPreviewElement) {
+    return;
+  }
+
+  outputPreviewElement.innerHTML =
+    mode === "markdown"
+      ? renderMarkdownPreviewHtml(content)
+      : "";
+
+  if (mode === "text") {
+    outputPreviewElement.textContent = content;
+  }
+
+  applyPaneLayout(body);
+}
+
 function setConfigFeedback(
   body: HTMLDivElement,
   message: string,
@@ -534,10 +585,12 @@ function renderPane(body: HTMLDivElement, item?: Zotero.Item): void {
   }
 
   if (outputPreviewElement) {
-    outputPreviewElement.textContent =
+    setOutputPreviewContent(
+      body,
       hasItem
         ? "AI response output will appear in this area after sending a request."
-        : "No output yet.";
+        : "No output yet."
+    );
   }
 
   if (!hasItem) {
@@ -573,15 +626,10 @@ function copyOutput(body: HTMLDivElement): void {
 }
 
 function clearOutput(body: HTMLDivElement): void {
-  const outputPreviewElement = body.querySelector(
-    "[data-sideai-role='output-preview']"
-  ) as HTMLDivElement | null;
-
-  if (outputPreviewElement) {
-    outputPreviewElement.textContent =
-      "AI response output will appear in this area after sending a request.";
-  }
-
+  setOutputPreviewContent(
+    body,
+    "AI response output will appear in this area after sending a request."
+  );
   setActionStatus(body, "Current session output cleared.");
   setPaneState(body, "ready");
 }
@@ -622,9 +670,7 @@ async function sendCurrentPreview(body: HTMLDivElement): Promise<void> {
   }
 
   setPaneState(body, "loading");
-  if (outputPreviewElement) {
-    outputPreviewElement.textContent = "Requesting model response...";
-  }
+  setOutputPreviewContent(body, "Requesting model response...");
 
   try {
     const responseText = await requestChatCompletionsText({
@@ -638,9 +684,7 @@ async function sendCurrentPreview(body: HTMLDivElement): Promise<void> {
       timeoutMs: 30000
     });
 
-    if (outputPreviewElement) {
-      outputPreviewElement.textContent = responseText;
-    }
+    setOutputPreviewContent(body, responseText, "markdown");
 
     setActionStatus(body, "Response received successfully.");
     setPaneState(body, "ready");
@@ -650,9 +694,7 @@ async function sendCurrentPreview(body: HTMLDivElement): Promise<void> {
         ? error.message.trim()
         : "Request failed.";
 
-    if (outputPreviewElement) {
-      outputPreviewElement.textContent = `Request failed.\n\n${message}`;
-    }
+    setOutputPreviewContent(body, `Request failed.\n\n${message}`);
 
     setPaneState(body, "error", message);
   }

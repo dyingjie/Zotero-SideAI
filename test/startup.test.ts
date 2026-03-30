@@ -31,6 +31,11 @@ import {
   stripHtml
 } from "../src/sidebar/context-preview";
 import {
+  escapeHtml,
+  parseMarkdownBlocks,
+  renderMarkdownPreviewHtml
+} from "../src/sidebar/output-render";
+import {
   createUserContextMessage,
   createSystemPromptMessage,
   createChatCompletionsRequestBody
@@ -516,6 +521,57 @@ describe("startup", function () {
     assert.strictEqual(
       getClearedOutputPlaceholder(),
       "AI response output will appear in this area after sending a request."
+    );
+  });
+
+  it("should parse markdown output into paragraphs and code blocks", function () {
+    assert.deepEqual(
+      parseMarkdownBlocks(
+        [
+          "# Summary",
+          "",
+          "First paragraph",
+          "second line",
+          "",
+          "```ts",
+          "const answer = 42;",
+          "```",
+          "",
+          "Final paragraph"
+        ].join("\n")
+      ),
+      [
+        {
+          text: "# Summary",
+          type: "paragraph"
+        },
+        {
+          text: "First paragraph\nsecond line",
+          type: "paragraph"
+        },
+        {
+          language: "ts",
+          text: "const answer = 42;",
+          type: "code"
+        },
+        {
+          text: "Final paragraph",
+          type: "paragraph"
+        }
+      ]
+    );
+  });
+
+  it("should render markdown preview html safely", function () {
+    assert.strictEqual(escapeHtml("<tag>&value"), "&lt;tag&gt;&amp;value");
+    assert.strictEqual(
+      renderMarkdownPreviewHtml(
+        ["Line <one>", "", "```html", "<b>safe</b>", "```"].join("\n")
+      ),
+      [
+        '<p class="sideai-output-paragraph">Line &lt;one&gt;</p>',
+        '<pre class="sideai-output-code"><code data-language="html">&lt;b&gt;safe&lt;/b&gt;</code></pre>'
+      ].join("")
     );
   });
 
