@@ -8,10 +8,11 @@ describe("startup", function () {
 
   it("should set initialized flag after startup", function () {
     const plugin = Zotero[config.addonInstance] as {
-      data?: { initialized?: boolean };
+      data?: { initialized?: boolean; sidebarPaneKey?: false | string };
     };
 
     assert.equal(plugin.data?.initialized, true);
+    assert.isString(plugin.data?.sidebarPaneKey);
   });
 
   it("should clean plugin instance on shutdown", async function () {

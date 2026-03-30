@@ -3,4 +3,6 @@
 /* eslint-disable */
 // @ts-nocheck
 export type FluentMessageId =
+  | 'sideai-pane-header'
+  | 'sideai-pane-sidenav'
   | 'sideai-startup-message';

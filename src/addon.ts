@@ -7,6 +7,7 @@ class Addon {
     config: typeof config;
     env: "development" | "production";
     initialized: boolean;
+    sidebarPaneKey: false | string;
   };
 
   public hooks: typeof hooks;
@@ -17,7 +18,8 @@ class Addon {
       alive: true,
       config,
       env: __env__,
-      initialized: false
+      initialized: false,
+      sidebarPaneKey: false
     };
     this.hooks = hooks;
     this.api = {};

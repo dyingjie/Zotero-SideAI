@@ -1,3 +1,8 @@
+import {
+  registerSideAIPane,
+  unregisterSideAIPane
+} from "./sidebar/item-pane";
+
 function log(message: string): void {
   Zotero.debug(`[Zotero SideAI] ${message}`);
 }
@@ -9,6 +14,7 @@ async function onStartup() {
     Zotero.uiReadyPromise
   ]);
 
+  addon.data.sidebarPaneKey = registerSideAIPane();
   log("Plugin startup completed.");
   addon.data.initialized = true;
 }
@@ -24,6 +30,8 @@ async function onMainWindowUnload(win: Window): Promise<void> {
 async function onShutdown(): Promise<void> {
   log("Plugin shutdown completed.");
   const addonInstance = addon.data.config.addonInstance;
+  unregisterSideAIPane();
+  addon.data.sidebarPaneKey = false;
   addon.data.initialized = false;
   addon.data.alive = false;
   delete (_globalThis as Record<string, unknown>).addon;
