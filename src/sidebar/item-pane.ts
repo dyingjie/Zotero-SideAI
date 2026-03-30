@@ -33,15 +33,37 @@ import {
   mergeNotePreviewTexts
 } from "./context-preview";
 import { renderMarkdownPreviewHtml } from "./output-render";
+import {
+  appendHistoryEntry,
+  buildHistoryEntry,
+  type OutputRenderMode,
+  type SessionHistoryEntry
+} from "./session-history";
 
 const SIDEBAR_PANE_ID = "sideai-panel";
+const OUTPUT_PLACEHOLDER =
+  "AI response output will appear in this area after sending a request.";
 
 let registeredPaneKey: false | string = false;
 const paneContextStore = new WeakMap<HTMLDivElement, CurrentTextContext>();
 type PaneState = "empty" | "ready" | "loading" | "error";
+const paneHistoryStore = new WeakMap<HTMLDivElement, SessionHistoryEntry[]>();
 
 function shouldEnableSendButton(state: PaneState): boolean {
   return state !== "empty" && state !== "loading";
+}
+
+function getSessionHistory(body: HTMLDivElement): SessionHistoryEntry[] {
+  return paneHistoryStore.get(body) || [];
+}
+
+function pushSessionHistory(
+  body: HTMLDivElement,
+  entry: SessionHistoryEntry
+): SessionHistoryEntry[] {
+  const nextHistory = appendHistoryEntry(getSessionHistory(body), entry);
+  paneHistoryStore.set(body, nextHistory);
+  return nextHistory;
 }
 
 function applyPaneLayout(body: HTMLDivElement): void {
@@ -131,6 +153,12 @@ function applyPaneLayout(body: HTMLDivElement): void {
   const outputCodeBlocks = body.querySelectorAll(".sideai-output-code");
   const outputCodeHeaders = body.querySelectorAll(".sideai-output-code-header");
   const outputCodeElements = body.querySelectorAll(".sideai-output-code code");
+  const historyList = body.querySelector(
+    "[data-sideai-role='history-list']"
+  ) as HTMLDivElement | null;
+  const historyItems = body.querySelectorAll(".sideai-history-item");
+  const historyBadges = body.querySelectorAll(".sideai-history-badge");
+  const historyButtons = body.querySelectorAll(".sideai-history-open");
   const commentTokens = body.querySelectorAll(".sideai-token-comment");
   const keywordTokens = body.querySelectorAll(".sideai-token-keyword");
   const numberTokens = body.querySelectorAll(".sideai-token-number");
@@ -221,6 +249,49 @@ function applyPaneLayout(body: HTMLDivElement): void {
     requestPreview.style.whiteSpace = "pre-wrap";
     requestPreview.style.overflowWrap = "anywhere";
   }
+
+  if (historyList) {
+    historyList.style.display = "flex";
+    historyList.style.flexDirection = "column";
+    historyList.style.gap = "6px";
+    historyList.style.maxHeight = "160px";
+    historyList.style.overflowY = "auto";
+  }
+
+  historyItems.forEach((item: Element) => {
+    const element = item as HTMLDivElement;
+    element.style.display = "flex";
+    element.style.flexDirection = "column";
+    element.style.gap = "4px";
+    element.style.padding = "8px";
+    element.style.borderRadius = "6px";
+    element.style.background = "var(--fill-tertiary, rgba(0,0,0,0.06))";
+    element.style.border = "1px solid var(--fill-secondary, rgba(0,0,0,0.12))";
+  });
+
+  historyBadges.forEach((badge: Element) => {
+    const element = badge as HTMLDivElement;
+    element.style.display = "inline-flex";
+    element.style.width = "fit-content";
+    element.style.padding = "2px 6px";
+    element.style.borderRadius = "999px";
+    element.style.fontSize = "10px";
+    element.style.fontWeight = "600";
+    element.style.background =
+      element.dataset.sideaiStatus === "error"
+        ? "rgba(208, 64, 64, 0.12)"
+        : "rgba(46, 125, 50, 0.12)";
+    element.style.color =
+      element.dataset.sideaiStatus === "error"
+        ? "var(--accent-red, #a12622)"
+        : "var(--accent-green, #2e7d32)";
+  });
+
+  historyButtons.forEach((button: Element) => {
+    const element = button as HTMLButtonElement;
+    element.style.alignSelf = "flex-start";
+    element.style.flex = "0 0 auto";
+  });
 
   if (outputBadge) {
     outputBadge.style.display = "inline-flex";
@@ -471,7 +542,7 @@ function setActionStatus(body: HTMLDivElement, message: string): void {
 function setOutputPreviewContent(
   body: HTMLDivElement,
   content: string,
-  mode: "markdown" | "text" = "text"
+  mode: OutputRenderMode = "text"
 ): void {
   const outputPreviewElement = body.querySelector(
     "[data-sideai-role='output-preview']"
@@ -489,6 +560,62 @@ function setOutputPreviewContent(
   if (mode === "text") {
     outputPreviewElement.textContent = content;
   }
+
+  applyPaneLayout(body);
+}
+
+function renderHistoryList(body: HTMLDivElement): void {
+  const historyListElement = body.querySelector(
+    "[data-sideai-role='history-list']"
+  ) as HTMLDivElement | null;
+
+  if (!historyListElement) {
+    return;
+  }
+
+  const history = getSessionHistory(body);
+  if (!history.length) {
+    historyListElement.textContent = "No session history yet.";
+    applyPaneLayout(body);
+    return;
+  }
+
+  historyListElement.innerHTML = history
+    .map(
+      (entry) => `
+        <div class="sideai-history-item">
+          <div class="sideai-history-badge" data-sideai-status="${entry.status}">
+            ${entry.status === "error" ? "Error" : "Success"}
+          </div>
+          <div>${entry.summary}</div>
+          <button class="sideai-history-open" data-sideai-history-id="${entry.id}">Open</button>
+        </div>
+      `
+    )
+    .join("");
+
+  historyListElement
+    .querySelectorAll("[data-sideai-history-id]")
+    .forEach((button: Element) => {
+      button.addEventListener("click", () => {
+        const historyId = (button as HTMLButtonElement).dataset.sideaiHistoryId;
+        const targetEntry = getSessionHistory(body).find(
+          (entry) => entry.id === historyId
+        );
+
+        if (!targetEntry) {
+          return;
+        }
+
+        setOutputPreviewContent(body, targetEntry.content, targetEntry.mode);
+        setActionStatus(body, "Loaded a previous session result.");
+        setPaneState(
+          body,
+          targetEntry.status === "error" ? "error" : "ready",
+          targetEntry.status === "error" ? targetEntry.summary : undefined
+        );
+      });
+    });
 
   applyPaneLayout(body);
 }
@@ -636,10 +763,15 @@ function renderPane(body: HTMLDivElement, item?: Zotero.Item): void {
     setOutputPreviewContent(
       body,
       hasItem
-        ? "AI response output will appear in this area after sending a request."
+        ? OUTPUT_PLACEHOLDER
         : "No output yet."
     );
   }
+
+  if (!paneHistoryStore.has(body)) {
+    paneHistoryStore.set(body, []);
+  }
+  renderHistoryList(body);
 
   if (!hasItem) {
     setPaneState(body, "empty");
@@ -674,10 +806,7 @@ function copyOutput(body: HTMLDivElement): void {
 }
 
 function clearOutput(body: HTMLDivElement): void {
-  setOutputPreviewContent(
-    body,
-    "AI response output will appear in this area after sending a request."
-  );
+  setOutputPreviewContent(body, OUTPUT_PLACEHOLDER);
   setActionStatus(body, "Current session output cleared.");
   setPaneState(body, "ready");
 }
@@ -733,6 +862,15 @@ async function sendCurrentPreview(body: HTMLDivElement): Promise<void> {
     });
 
     setOutputPreviewContent(body, responseText, "markdown");
+    pushSessionHistory(
+      body,
+      buildHistoryEntry({
+        content: responseText,
+        mode: "markdown",
+        status: "success"
+      })
+    );
+    renderHistoryList(body);
 
     setActionStatus(body, "Response received successfully.");
     setPaneState(body, "ready");
@@ -743,6 +881,15 @@ async function sendCurrentPreview(body: HTMLDivElement): Promise<void> {
         : "Request failed.";
 
     setOutputPreviewContent(body, `Request failed.\n\n${message}`);
+    pushSessionHistory(
+      body,
+      buildHistoryEntry({
+        content: `Request failed.\n\n${message}`,
+        mode: "text",
+        status: "error"
+      })
+    );
+    renderHistoryList(body);
 
     setPaneState(body, "error", message);
   }
@@ -834,6 +981,12 @@ export function registerSideAIPane(): false | string {
             <html:div class="sideai-pane-label">Latest Result</html:div>
             <html:div data-sideai-role="output-badge">Idle</html:div>
             <html:div class="sideai-pane-output" data-sideai-role="output-preview"></html:div>
+          </html:div>
+        </html:div>
+        <html:div class="sideai-pane-section">
+          <html:div class="sideai-pane-label">History</html:div>
+          <html:div class="sideai-pane-card">
+            <html:div class="sideai-pane-muted" data-sideai-role="history-list">No session history yet.</html:div>
           </html:div>
         </html:div>
         <html:div class="sideai-pane-section">

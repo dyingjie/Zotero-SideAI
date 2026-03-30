@@ -31,6 +31,12 @@ import {
   stripHtml
 } from "../src/sidebar/context-preview";
 import {
+  appendHistoryEntry,
+  buildHistoryEntry,
+  buildHistorySummary,
+  MAX_HISTORY_ITEMS
+} from "../src/sidebar/session-history";
+import {
   escapeHtml,
   highlightCode,
   parseMarkdownBlocks,
@@ -594,6 +600,42 @@ describe("startup", function () {
       ),
       '<pre class="sideai-output-code"><div class="sideai-output-code-header">json</div><code data-language="json">{ <span class="sideai-token-property">"name"</span>: <span class="sideai-token-string">"sideai"</span>, <span class="sideai-token-property">"enabled"</span>: <span class="sideai-token-keyword">true</span> }</code></pre>'
     );
+  });
+
+  it("should build capped session history entries", function () {
+    assert.strictEqual(buildHistorySummary(" \n  first line   second line "), "first line second line");
+    assert.strictEqual(buildHistorySummary(""), "Empty response");
+
+    const entry = buildHistoryEntry({
+      content: "Result body",
+      mode: "markdown",
+      status: "success"
+    });
+
+    assert.strictEqual(entry.content, "Result body");
+    assert.strictEqual(entry.mode, "markdown");
+    assert.strictEqual(entry.status, "success");
+    assert.strictEqual(entry.summary, "Result body");
+    assert.isString(entry.id);
+
+    let history = Array.from({ length: MAX_HISTORY_ITEMS }, (_value, index) =>
+      buildHistoryEntry({
+        content: `Item ${index}`,
+        mode: "text",
+        status: "success"
+      })
+    );
+
+    const newestEntry = buildHistoryEntry({
+      content: "Newest item",
+      mode: "text",
+      status: "error"
+    });
+    history = appendHistoryEntry(history, newestEntry);
+
+    assert.strictEqual(history.length, MAX_HISTORY_ITEMS);
+    assert.strictEqual(history[0].content, "Newest item");
+    assert.strictEqual(history[0].status, "error");
   });
 
   it("should clean plugin instance on shutdown", async function () {
