@@ -17,6 +17,9 @@ function applyPaneLayout(body: HTMLDivElement): void {
   const labels = body.querySelectorAll(".sideai-config-label");
   const inputs = body.querySelectorAll(".sideai-config-input");
   const textareas = body.querySelectorAll(".sideai-config-textarea");
+  const outputBadge = body.querySelector(
+    "[data-sideai-role='output-badge']"
+  ) as HTMLDivElement | null;
 
   if (root) {
     root.style.display = "flex";
@@ -89,6 +92,19 @@ function applyPaneLayout(body: HTMLDivElement): void {
     outputPreview.style.overflowY = "auto";
     outputPreview.style.whiteSpace = "pre-wrap";
     outputPreview.style.overflowWrap = "anywhere";
+  }
+
+  if (outputBadge) {
+    outputBadge.style.display = "inline-flex";
+    outputBadge.style.alignItems = "center";
+    outputBadge.style.width = "fit-content";
+    outputBadge.style.maxWidth = "100%";
+    outputBadge.style.padding = "2px 8px";
+    outputBadge.style.marginBottom = "6px";
+    outputBadge.style.borderRadius = "999px";
+    outputBadge.style.fontSize = "11px";
+    outputBadge.style.fontWeight = "600";
+    outputBadge.style.background = "var(--fill-tertiary, rgba(0,0,0,0.08))";
   }
 
   if (actions) {
@@ -228,6 +244,9 @@ function setPaneState(
   const outputPreviewElement = body.querySelector(
     "[data-sideai-role='output-preview']"
   ) as HTMLDivElement | null;
+  const outputBadgeElement = body.querySelector(
+    "[data-sideai-role='output-badge']"
+  ) as HTMLDivElement | null;
 
   body.setAttribute("data-sideai-state", state);
 
@@ -260,6 +279,17 @@ function setPaneState(
   if (copyButton) {
     const hasOutput = !!outputPreviewElement?.textContent?.trim();
     copyButton.disabled = state === "loading" || !hasOutput;
+  }
+
+  if (outputBadgeElement) {
+    outputBadgeElement.textContent =
+      state === "loading"
+        ? "Loading"
+        : state === "error"
+          ? "Error"
+          : state === "empty"
+            ? "Idle"
+            : "Ready";
   }
 }
 
@@ -440,7 +470,11 @@ export function registerSideAIPane(): false | string {
         </html:div>
         <html:div class="sideai-pane-section">
           <html:div class="sideai-pane-label">Output</html:div>
-          <html:div class="sideai-pane-card sideai-pane-output" data-sideai-role="output-preview"></html:div>
+          <html:div class="sideai-pane-card">
+            <html:div class="sideai-pane-label">Latest Result</html:div>
+            <html:div data-sideai-role="output-badge">Idle</html:div>
+            <html:div class="sideai-pane-output" data-sideai-role="output-preview"></html:div>
+          </html:div>
         </html:div>
         <html:div class="sideai-pane-section">
           <html:div class="sideai-pane-label">Actions</html:div>
