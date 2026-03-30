@@ -423,6 +423,32 @@ describe("startup", function () {
     );
   });
 
+  it("should surface understandable errors for invalid baseURL values", async function () {
+    let thrownError: unknown;
+
+    try {
+      await postChatCompletionsRequest({
+        apiKey: "sk-test",
+        baseUrl: "http://[invalid-url",
+        body: {
+          messages: [{ role: "user", content: "Hello" }],
+          model: "gpt-4.1-mini"
+        },
+        fetchFn: async () => {
+          throw new Error("Failed to parse URL from http://[invalid-url/chat/completions");
+        }
+      });
+    } catch (error) {
+      thrownError = error;
+    }
+
+    assert.instanceOf(thrownError, AIRequestError);
+    assert.strictEqual(
+      (thrownError as AIRequestError).message,
+      "Failed to parse URL from http://[invalid-url/chat/completions"
+    );
+  });
+
   it("should send custom model name through request service", async function () {
     let capturedBody = "";
 
