@@ -164,6 +164,34 @@ npm test
 - 插件实例已注册到 `Zotero.SideAI`
 - 启动阶段已将 `initialized` 标记设为 `true`
 - `shutdown` 后会清理插件状态与实例引用
+- 设置存储、Prompt 组装、OpenAI 兼容请求和响应解析链路
+- Markdown 渲染、代码块高亮和历史记录等主流程展示逻辑
+
+## Zotero 8 主流程验证记录
+
+最近一次主流程验证时间：
+
+- 2026-03-31
+
+验证环境：
+
+- Windows
+- Zotero 8（由 `zotero-plugin test` 调起本机 `C:\Program Files\Zotero\zotero.exe`）
+
+本轮已确认的主流程信号：
+
+- 插件能在 Zotero 8 测试环境加载并注册 `SideAI` 实例
+- 侧边栏 section 已成功注册到 Item Pane
+- 配置读写、恢复默认值和发送前缺失校验可正常工作
+- 当前文本预览、Prompt 预览、Chat Completions 请求构造与返回解析链路可正常工作
+- 输出区支持正常结果、错误结果、复制、重试、清空、Markdown 渲染、代码高亮和历史记录
+
+建议后续继续沿用下面这条命令作为主流程回归入口：
+
+```powershell
+$env:ZOTERO_PLUGIN_ZOTERO_BIN_PATH='C:\Program Files\Zotero\zotero.exe'
+npm test
+```
 
 当前可用的开发态安装与热重载验证：
 
