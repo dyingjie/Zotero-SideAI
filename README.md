@@ -137,6 +137,58 @@
 - [docs/structure.md](docs/structure.md)：目录结构说明
 - [docs/development.md](docs/development.md)：开发方式、测试命令与验证记录
 
+## 安装说明
+
+当前仓库更适合开发态安装和本地调试，推荐按下面步骤启动：
+
+1. 准备环境
+
+- 安装 Node.js
+- 安装 Zotero 8
+- 确认本机可以直接启动 Zotero 可执行文件
+
+2. 获取代码并安装依赖
+
+```powershell
+git clone https://github.com/dyingjie/Zotero-SideAI.git
+cd Zotero-SideAI
+npm install
+```
+
+3. 指定本机 Zotero 路径
+
+Windows 示例：
+
+```powershell
+$env:ZOTERO_PLUGIN_ZOTERO_BIN_PATH='C:\Program Files\Zotero\zotero.exe'
+```
+
+4. 开发态加载插件
+
+```powershell
+npm run start
+```
+
+开发态下，脚手架会自动构建并把插件以 temporary add-on 的方式安装到 Zotero 8。
+
+5. 验证插件是否加载成功
+
+- 打开 Zotero 8
+- 选中一个文献条目
+- 在右侧 Item Pane 中确认是否出现 `SideAI` section
+
+如果你只想验证当前构建和测试链路，也可以直接运行：
+
+```powershell
+npm test
+```
+
+如果你需要先生成构建产物，再自行检查打包结果，可以运行：
+
+```powershell
+npm run build
+```
+
 ## 当前仓库状态
 
 当前仓库主要包含：
