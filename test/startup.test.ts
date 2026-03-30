@@ -26,6 +26,10 @@ import {
   getMissingConfigMessage
 } from "../src/sidebar/send-validation";
 import {
+  shouldEnableSendButton,
+  shouldStartSendRequest
+} from "../src/sidebar/pane-state";
+import {
   MAX_CONTEXT_PREVIEW_LENGTH,
   TRUNCATED_PREVIEW_SUFFIX,
   buildPreviewTextFromContext,
@@ -656,14 +660,17 @@ describe("startup", function () {
   });
 
   it("should keep send action enabled for retry after errors", function () {
-    const shouldEnableSendButton = (
-      state: "empty" | "ready" | "loading" | "error"
-    ) => state !== "empty" && state !== "loading";
-
     assert.strictEqual(shouldEnableSendButton("ready"), true);
     assert.strictEqual(shouldEnableSendButton("error"), true);
     assert.strictEqual(shouldEnableSendButton("loading"), false);
     assert.strictEqual(shouldEnableSendButton("empty"), false);
+  });
+
+  it("should block rapid repeated sends while request is loading", function () {
+    assert.strictEqual(shouldStartSendRequest("ready"), true);
+    assert.strictEqual(shouldStartSendRequest("error"), true);
+    assert.strictEqual(shouldStartSendRequest("loading"), false);
+    assert.strictEqual(shouldStartSendRequest("empty"), false);
   });
 
   it("should support clearing current session output", function () {

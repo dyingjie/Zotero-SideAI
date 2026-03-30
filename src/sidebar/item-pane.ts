@@ -39,6 +39,11 @@ import {
   type OutputRenderMode,
   type SessionHistoryEntry
 } from "./session-history";
+import {
+  type PaneState,
+  shouldEnableSendButton,
+  shouldStartSendRequest
+} from "./pane-state";
 
 const SIDEBAR_PANE_ID = "sideai-panel";
 const OUTPUT_PLACEHOLDER =
@@ -46,12 +51,7 @@ const OUTPUT_PLACEHOLDER =
 
 let registeredPaneKey: false | string = false;
 const paneContextStore = new WeakMap<HTMLDivElement, CurrentTextContext>();
-type PaneState = "empty" | "ready" | "loading" | "error";
 const paneHistoryStore = new WeakMap<HTMLDivElement, SessionHistoryEntry[]>();
-
-function shouldEnableSendButton(state: PaneState): boolean {
-  return state !== "empty" && state !== "loading";
-}
 
 function getSessionHistory(body: HTMLDivElement): SessionHistoryEntry[] {
   return paneHistoryStore.get(body) || [];
@@ -812,6 +812,14 @@ function clearOutput(body: HTMLDivElement): void {
 }
 
 async function sendCurrentPreview(body: HTMLDivElement): Promise<void> {
+  const currentState = (body.getAttribute("data-sideai-state") ||
+    "empty") as PaneState;
+
+  if (!shouldStartSendRequest(currentState)) {
+    setActionStatus(body, "Request is already in progress.");
+    return;
+  }
+
   const baseUrlInput = getBaseUrlInput(body);
   const modelInput = getModelInput(body);
   const systemPromptInput = getSystemPromptInput(body);
