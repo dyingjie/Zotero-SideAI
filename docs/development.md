@@ -183,3 +183,134 @@
 - 结构变化优先更新 `docs/structure.md`
 - 开发方式变化优先更新本文件
 - 执行进度以 `TODO.md` 为准
+
+## 代码风格与命名约定
+
+### 总体原则
+
+- 优先保持简单、稳定、可读
+- 一个模块只负责一类事情
+- 避免过早抽象
+- 命名优先表达职责，不追求缩写
+
+### 文件命名
+
+统一使用小写字母和连字符或语义目录，不使用随意缩写。
+
+建议：
+
+- 普通模块文件：`kebab-case`
+- 入口文件：`index`
+- 文档文件：`kebab-case`
+
+示例：
+
+- `src/bootstrap/index.ts`
+- `src/services/api-client.ts`
+- `src/services/prompt-builder.ts`
+- `src/settings/config-store.ts`
+
+### 变量与函数命名
+
+- 变量名：`camelCase`
+- 函数名：`camelCase`
+- 类名：`PascalCase`
+- 常量名：`UPPER_SNAKE_CASE`
+
+示例：
+
+- `currentText`
+- `buildPrompt`
+- `SidebarController`
+- `DEFAULT_BASE_URL`
+
+### 布尔值命名
+
+布尔值优先使用可读性强的前缀：
+
+- `is`
+- `has`
+- `can`
+- `should`
+
+示例：
+
+- `isLoading`
+- `hasApiKey`
+- `canSend`
+- `shouldTruncate`
+
+### 事件与处理函数命名
+
+事件处理函数统一使用动作前缀：
+
+- `handle`
+- `on`
+
+推荐：
+
+- `handleSendClick`
+- `handleSettingsSave`
+- `onItemSelectionChange`
+
+### 服务函数命名
+
+服务层函数尽量使用明确动词开头：
+
+- `get`
+- `load`
+- `save`
+- `build`
+- `create`
+- `send`
+- `parse`
+
+示例：
+
+- `getCurrentContext`
+- `loadSettings`
+- `saveSettings`
+- `buildMessages`
+- `sendChatCompletion`
+- `parseChatResponse`
+
+### Zotero 相关命名
+
+与 Zotero 直接耦合的模块或对象，命名中保留 `zotero` 语义，避免后面难以区分边界。
+
+示例：
+
+- `zotero-pane.ts`
+- `zotero-item-context.ts`
+- `registerZoteroSidebar`
+
+### 注释约定
+
+- 注释只解释“为什么这样做”或“这里有什么特殊约束”
+- 不写逐行翻译式注释
+- 如果逻辑已经靠命名表达清楚，就不额外加注释
+
+### 错误消息约定
+
+- 面向用户的错误消息尽量简洁明确
+- 面向开发的错误日志尽量保留上下文
+- 不要把底层异常原样直接展示给最终用户
+
+建议区分：
+
+- UI 提示：`请先填写 API Key`
+- 日志记录：`saveSettings failed: missing apiKey`
+
+### 导出约定
+
+- 一个文件优先只暴露一个主要职责
+- 公共能力用命名导出
+- 避免默认导出和多种风格混用
+
+### 风格验收标准
+
+后续代码提交时，至少满足：
+
+- 命名风格前后一致
+- 模块职责没有明显混乱
+- 配置、请求、UI 逻辑没有大面积耦合在一个文件里
