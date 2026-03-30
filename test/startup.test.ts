@@ -32,6 +32,7 @@ import {
 } from "../src/sidebar/context-preview";
 import {
   escapeHtml,
+  highlightCode,
   parseMarkdownBlocks,
   renderMarkdownPreviewHtml
 } from "../src/sidebar/output-render";
@@ -570,8 +571,28 @@ describe("startup", function () {
       ),
       [
         '<p class="sideai-output-paragraph">Line &lt;one&gt;</p>',
-        '<pre class="sideai-output-code"><code data-language="html">&lt;b&gt;safe&lt;/b&gt;</code></pre>'
+        '<pre class="sideai-output-code"><div class="sideai-output-code-header">html</div><code data-language="html">&lt;b&gt;safe&lt;/b&gt;</code></pre>'
       ].join("")
+    );
+  });
+
+  it("should highlight common code tokens in fenced blocks", function () {
+    assert.strictEqual(
+      highlightCode(
+        "ts",
+        ['const value = "ok";', "// comment", "return 42;"].join("\n")
+      ),
+      [
+        '<span class="sideai-token-keyword">const</span> value = <span class="sideai-token-string">"ok"</span>;',
+        '<span class="sideai-token-comment">// comment</span>',
+        '<span class="sideai-token-keyword">return</span> <span class="sideai-token-number">42</span>;'
+      ].join("\n")
+    );
+    assert.strictEqual(
+      renderMarkdownPreviewHtml(
+        ["```json", '{ "name": "sideai", "enabled": true }', "```"].join("\n")
+      ),
+      '<pre class="sideai-output-code"><div class="sideai-output-code-header">json</div><code data-language="json">{ <span class="sideai-token-property">"name"</span>: <span class="sideai-token-string">"sideai"</span>, <span class="sideai-token-property">"enabled"</span>: <span class="sideai-token-keyword">true</span> }</code></pre>'
     );
   });
 

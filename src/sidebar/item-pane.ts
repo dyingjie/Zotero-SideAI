@@ -129,7 +129,13 @@ function applyPaneLayout(body: HTMLDivElement): void {
   ) as HTMLDivElement | null;
   const outputParagraphs = body.querySelectorAll(".sideai-output-paragraph");
   const outputCodeBlocks = body.querySelectorAll(".sideai-output-code");
+  const outputCodeHeaders = body.querySelectorAll(".sideai-output-code-header");
   const outputCodeElements = body.querySelectorAll(".sideai-output-code code");
+  const commentTokens = body.querySelectorAll(".sideai-token-comment");
+  const keywordTokens = body.querySelectorAll(".sideai-token-keyword");
+  const numberTokens = body.querySelectorAll(".sideai-token-number");
+  const propertyTokens = body.querySelectorAll(".sideai-token-property");
+  const stringTokens = body.querySelectorAll(".sideai-token-string");
 
   if (contextPreview) {
     contextPreview.style.maxHeight = "120px";
@@ -153,17 +159,59 @@ function applyPaneLayout(body: HTMLDivElement): void {
   outputCodeBlocks.forEach((codeBlock: Element) => {
     const element = codeBlock as HTMLPreElement;
     element.style.margin = "0";
-    element.style.padding = "8px";
+    element.style.padding = "0";
     element.style.borderRadius = "6px";
     element.style.overflowX = "auto";
     element.style.background = "var(--fill-tertiary, rgba(0,0,0,0.08))";
+    element.style.border = "1px solid var(--fill-secondary, rgba(0,0,0,0.12))";
+  });
+
+  outputCodeHeaders.forEach((header: Element) => {
+    const element = header as HTMLDivElement;
+    element.style.padding = "6px 8px";
+    element.style.fontSize = "11px";
+    element.style.fontWeight = "600";
+    element.style.textTransform = "uppercase";
+    element.style.letterSpacing = "0.04em";
+    element.style.borderBottom = "1px solid var(--fill-secondary, rgba(0,0,0,0.12))";
+    element.style.color = "var(--text-color-deemphasized, #666)";
   });
 
   outputCodeElements.forEach((codeElement: Element) => {
     const element = codeElement as HTMLElement;
+    element.style.display = "block";
+    element.style.padding = "8px";
     element.style.whiteSpace = "pre";
     element.style.fontFamily = "monospace";
     element.style.fontSize = "12px";
+    element.style.lineHeight = "1.5";
+  });
+
+  commentTokens.forEach((token: Element) => {
+    const element = token as HTMLElement;
+    element.style.color = "#6a737d";
+    element.style.fontStyle = "italic";
+  });
+
+  keywordTokens.forEach((token: Element) => {
+    const element = token as HTMLElement;
+    element.style.color = "#b31d28";
+    element.style.fontWeight = "600";
+  });
+
+  numberTokens.forEach((token: Element) => {
+    const element = token as HTMLElement;
+    element.style.color = "#005cc5";
+  });
+
+  propertyTokens.forEach((token: Element) => {
+    const element = token as HTMLElement;
+    element.style.color = "#6f42c1";
+  });
+
+  stringTokens.forEach((token: Element) => {
+    const element = token as HTMLElement;
+    element.style.color = "#22863a";
   });
 
   if (requestPreview) {
