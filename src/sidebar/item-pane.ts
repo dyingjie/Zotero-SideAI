@@ -5,6 +5,11 @@ import {
   saveBaseUrl
 } from "../settings/base-url";
 import { getDefaultModel, getSavedModel, saveModel } from "../settings/model";
+import {
+  getDefaultSystemPrompt,
+  getSavedSystemPrompt,
+  saveSystemPrompt
+} from "../settings/system-prompt";
 
 const SIDEBAR_PANE_ID = "sideai-panel";
 
@@ -313,6 +318,10 @@ function getModelInput(body: HTMLDivElement): HTMLInputElement | null {
   return body.querySelector("#sideai-model") as HTMLInputElement | null;
 }
 
+function getSystemPromptInput(body: HTMLDivElement): HTMLTextAreaElement | null {
+  return body.querySelector("#sideai-system-prompt") as HTMLTextAreaElement | null;
+}
+
 function setConfigSummary(body: HTMLDivElement, message: string): void {
   const configSummaryElement = body.querySelector(
     "[data-sideai-role='config-summary']"
@@ -326,6 +335,7 @@ function setConfigSummary(body: HTMLDivElement, message: string): void {
 function syncSavedSettings(body: HTMLDivElement): void {
   const baseUrlInput = getBaseUrlInput(body);
   const modelInput = getModelInput(body);
+  const systemPromptInput = getSystemPromptInput(body);
   const apiKeyInput = getApiKeyInput(body);
 
   if (baseUrlInput) {
@@ -334,6 +344,10 @@ function syncSavedSettings(body: HTMLDivElement): void {
 
   if (modelInput) {
     modelInput.value = getSavedModel();
+  }
+
+  if (systemPromptInput) {
+    systemPromptInput.value = getSavedSystemPrompt();
   }
 
   if (!apiKeyInput) {
@@ -346,19 +360,21 @@ function syncSavedSettings(body: HTMLDivElement): void {
 function persistSettings(body: HTMLDivElement): void {
   const baseUrlInput = getBaseUrlInput(body);
   const modelInput = getModelInput(body);
+  const systemPromptInput = getSystemPromptInput(body);
   const apiKeyInput = getApiKeyInput(body);
 
-  if (!baseUrlInput || !modelInput || !apiKeyInput) {
+  if (!baseUrlInput || !modelInput || !systemPromptInput || !apiKeyInput) {
     return;
   }
 
   try {
     saveBaseUrl(baseUrlInput.value);
     saveModel(modelInput.value);
+    saveSystemPrompt(systemPromptInput.value);
     saveApiKey(apiKeyInput.value);
     setConfigSummary(
       body,
-      "API Key, Base URL, and model are saved locally. Persistence for other settings will be added next."
+      "API Key, Base URL, model, and fixed prompt are saved locally."
     );
   } catch (error) {
     Zotero.logError(
@@ -395,9 +411,10 @@ function renderPane(body: HTMLDivElement, item?: Zotero.Item): void {
     configSummaryElement.textContent =
       getSavedApiKey() ||
       getSavedBaseUrl() !== getDefaultBaseUrl() ||
-      getSavedModel() !== getDefaultModel()
-        ? "Saved API Key, Base URL, and model are loaded from local settings. Persistence for other settings is still pending."
-        : "API Key, Base URL, and model are not saved yet. Other settings persistence will be added later.";
+      getSavedModel() !== getDefaultModel() ||
+      getSavedSystemPrompt() !== getDefaultSystemPrompt()
+        ? "Saved API Key, Base URL, model, and fixed prompt are loaded from local settings."
+        : "API Key, Base URL, model, and fixed prompt are not saved yet.";
   }
 
   if (contextPreviewElement) {
@@ -533,7 +550,7 @@ export function registerSideAIPane(): false | string {
                 <html:textarea
                   id="sideai-system-prompt"
                   class="sideai-config-textarea"
-                >You are an academic reading assistant. Summarize the selected paper content clearly and faithfully.</html:textarea>
+                >${getDefaultSystemPrompt()}</html:textarea>
               </html:div>
               <html:div class="sideai-pane-actions">
                 <html:button data-sideai-role="save-settings-button">Save Settings</html:button>

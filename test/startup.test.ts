@@ -11,6 +11,11 @@ import {
   getSavedModel,
   saveModel
 } from "../src/settings/model";
+import {
+  getDefaultSystemPrompt,
+  getSavedSystemPrompt,
+  saveSystemPrompt
+} from "../src/settings/system-prompt";
 
 describe("startup", function () {
   it("should register plugin instance on Zotero", function () {
@@ -57,6 +62,18 @@ describe("startup", function () {
 
     saveModel("gpt-4.1");
     assert.strictEqual(getSavedModel(), "gpt-4.1");
+
+    Zotero.Prefs.clear(prefKey, true);
+  });
+
+  it("should persist system prompt in Zotero prefs", function () {
+    const prefKey = `${config.prefsPrefix}.systemPrompt`;
+
+    Zotero.Prefs.clear(prefKey, true);
+    assert.strictEqual(getSavedSystemPrompt(), getDefaultSystemPrompt());
+
+    saveSystemPrompt("Summarize this paper in Chinese.");
+    assert.strictEqual(getSavedSystemPrompt(), "Summarize this paper in Chinese.");
 
     Zotero.Prefs.clear(prefKey, true);
   });
