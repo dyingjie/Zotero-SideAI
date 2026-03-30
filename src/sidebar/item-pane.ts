@@ -28,6 +28,12 @@ function setPaneState(
   const sendButton = body.querySelector(
     "[data-sideai-role='send-button']"
   ) as HTMLButtonElement | null;
+  const copyButton = body.querySelector(
+    "[data-sideai-role='copy-button']"
+  ) as HTMLButtonElement | null;
+  const outputPreviewElement = body.querySelector(
+    "[data-sideai-role='output-preview']"
+  ) as HTMLDivElement | null;
 
   body.setAttribute("data-sideai-state", state);
 
@@ -55,6 +61,11 @@ function setPaneState(
 
   if (sendButton) {
     sendButton.disabled = state !== "ready";
+  }
+
+  if (copyButton) {
+    const hasOutput = !!outputPreviewElement?.textContent?.trim();
+    copyButton.disabled = state === "loading" || !hasOutput;
   }
 }
 
@@ -102,6 +113,30 @@ function renderPane(body: HTMLDivElement, item?: Zotero.Item): void {
   setPaneState(body, "ready");
 }
 
+function copyOutput(body: HTMLDivElement): void {
+  const outputPreviewElement = body.querySelector(
+    "[data-sideai-role='output-preview']"
+  ) as HTMLDivElement | null;
+  const actionStatusElement = body.querySelector(
+    "[data-sideai-role='action-status']"
+  ) as HTMLDivElement | null;
+
+  const outputText = outputPreviewElement?.textContent?.trim() || "";
+
+  if (!outputText) {
+    if (actionStatusElement) {
+      actionStatusElement.textContent = "No output available to copy.";
+    }
+    return;
+  }
+
+  Zotero.Utilities.Internal.copyTextToClipboard(outputText);
+
+  if (actionStatusElement) {
+    actionStatusElement.textContent = "Output copied to clipboard.";
+  }
+}
+
 export function registerSideAIPane(): false | string {
   if (registeredPaneKey) {
     return registeredPaneKey;
@@ -140,13 +175,22 @@ export function registerSideAIPane(): false | string {
           <html:div class="sideai-pane-label">Actions</html:div>
           <html:div class="sideai-pane-actions">
             <html:button data-sideai-role="send-button" disabled="true">Send</html:button>
-            <html:button disabled="true">Copy</html:button>
+            <html:button data-sideai-role="copy-button" disabled="true">Copy</html:button>
             <html:button disabled="true">Clear</html:button>
           </html:div>
           <html:div class="sideai-pane-muted" data-sideai-role="action-status"></html:div>
         </html:div>
       </html:div>
     `,
+    onInit: ({ body }) => {
+      const copyButton = body.querySelector(
+        "[data-sideai-role='copy-button']"
+      ) as HTMLButtonElement | null;
+
+      copyButton?.addEventListener("click", () => {
+        copyOutput(body);
+      });
+    },
     onItemChange: ({ item, setEnabled, tabType }) => {
       setEnabled(tabType === "library" && !!item);
       return true;
