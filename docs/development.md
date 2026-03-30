@@ -152,6 +152,18 @@
 - 新增功能是否真的能从 UI 触发
 - 异常路径是否有提示
 
+当前可用的启动 smoke test：
+
+```powershell
+$env:ZOTERO_PLUGIN_ZOTERO_BIN_PATH='C:\Program Files\Zotero\zotero.exe'
+npm test
+```
+
+这条命令当前会验证：
+
+- 插件实例已注册到 `Zotero.SideAI`
+- 启动阶段已将 `initialized` 标记设为 `true`
+
 ## 当前最值得先完成的文件
 
 建议下一阶段优先补这些文件：
