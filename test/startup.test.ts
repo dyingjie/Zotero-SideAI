@@ -40,6 +40,7 @@ import {
   buildPreviewMessages,
   formatPreviewMessages
 } from "../src/services/request-preview";
+import { postChatCompletionsRequest } from "../src/services/ai-request";
 
 describe("startup", function () {
   it("should register plugin instance on Zotero", function () {
@@ -288,6 +289,43 @@ describe("startup", function () {
         "Abstract body"
       ].join("\n")
     );
+  });
+
+  it("should encapsulate chat completion request sending", async function () {
+    let capturedUrl = "";
+    let capturedOptions: RequestInit | undefined;
+
+    const mockResponse = {
+      ok: true
+    } as Response;
+
+    const response = await postChatCompletionsRequest({
+      apiKey: " sk-test ",
+      body: {
+        messages: [{ role: "user", content: "Hello" }],
+        model: "gpt-4.1-mini"
+      },
+      endpoint: "https://example.com/v1/chat/completions",
+      fetchFn: async (url, options) => {
+        capturedUrl = String(url);
+        capturedOptions = options;
+        return mockResponse;
+      }
+    });
+
+    assert.strictEqual(response, mockResponse);
+    assert.strictEqual(capturedUrl, "https://example.com/v1/chat/completions");
+    assert.deepEqual(capturedOptions, {
+      body: JSON.stringify({
+        messages: [{ role: "user", content: "Hello" }],
+        model: "gpt-4.1-mini"
+      }),
+      headers: {
+        Authorization: "Bearer sk-test",
+        "Content-Type": "application/json"
+      },
+      method: "POST"
+    });
   });
 
   it("should clean plugin instance on shutdown", async function () {
