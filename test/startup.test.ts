@@ -42,6 +42,7 @@ import {
 } from "../src/services/request-preview";
 import {
   buildChatCompletionsEndpoint,
+  postChatCompletionsMessages,
   postChatCompletionsRequest
 } from "../src/services/ai-request";
 
@@ -339,6 +340,29 @@ describe("startup", function () {
     assert.strictEqual(
       buildChatCompletionsEndpoint("https://example.com/proxy/openai"),
       "https://example.com/proxy/openai/chat/completions"
+    );
+  });
+
+  it("should send custom model name through request service", async function () {
+    let capturedBody = "";
+
+    await postChatCompletionsMessages({
+      apiKey: "sk-test",
+      baseUrl: "https://example.com/v1",
+      messages: [{ role: "user", content: "Hello" }],
+      model: "custom-model-name",
+      fetchFn: async (_url, options) => {
+        capturedBody = String(options?.body || "");
+        return { ok: true } as Response;
+      }
+    });
+
+    assert.strictEqual(
+      capturedBody,
+      JSON.stringify({
+        messages: [{ role: "user", content: "Hello" }],
+        model: "custom-model-name"
+      })
     );
   });
 

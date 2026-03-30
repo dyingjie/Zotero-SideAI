@@ -1,4 +1,8 @@
-import type { ChatCompletionsRequestBody } from "./chat-completions";
+import {
+  createChatCompletionsRequestBody,
+  type ChatCompletionMessage,
+  type ChatCompletionsRequestBody
+} from "./chat-completions";
 
 export function buildChatCompletionsEndpoint(baseUrl: string): string {
   return `${baseUrl.trim().replace(/\/+$/, "")}/chat/completions`;
@@ -20,5 +24,23 @@ export async function postChatCompletionsRequest(input: {
       "Content-Type": "application/json"
     },
     method: "POST"
+  });
+}
+
+export async function postChatCompletionsMessages(input: {
+  apiKey: string;
+  baseUrl: string;
+  fetchFn?: typeof fetch;
+  messages: ChatCompletionMessage[];
+  model: string;
+}): Promise<Response> {
+  return postChatCompletionsRequest({
+    apiKey: input.apiKey,
+    baseUrl: input.baseUrl,
+    body: createChatCompletionsRequestBody({
+      messages: input.messages,
+      model: input.model
+    }),
+    fetchFn: input.fetchFn
   });
 }
