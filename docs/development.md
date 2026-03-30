@@ -165,6 +165,21 @@ npm test
 - 启动阶段已将 `initialized` 标记设为 `true`
 - `shutdown` 后会清理插件状态与实例引用
 
+当前可用的开发态安装与热重载验证：
+
+```powershell
+$env:ZOTERO_PLUGIN_ZOTERO_BIN_PATH='C:\Program Files\Zotero\zotero.exe'
+npm run start
+```
+
+本项目已经实际验证过以下信号：
+
+- 开发服务器会把 `.scaffold/build/addon` 安装为 temporary add-on
+- 日志会出现 `Server Ready!`
+- 源文件变化后会出现 `changed`
+- 随后会出现 `Reloading...`
+- 最终会出现 `Last extension reload`
+
 ## 当前最值得先完成的文件
 
 建议下一阶段优先补这些文件：
