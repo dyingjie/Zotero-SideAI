@@ -16,6 +16,7 @@ function applyPaneLayout(body: HTMLDivElement): void {
   const configRows = body.querySelectorAll(".sideai-config-row");
   const labels = body.querySelectorAll(".sideai-config-label");
   const inputs = body.querySelectorAll(".sideai-config-input");
+  const textareas = body.querySelectorAll(".sideai-config-textarea");
 
   if (root) {
     root.style.display = "flex";
@@ -137,6 +138,18 @@ function applyPaneLayout(body: HTMLDivElement): void {
     element.style.padding = "6px 8px";
     element.style.borderRadius = "6px";
   });
+
+  textareas.forEach((textarea: Element) => {
+    const element = textarea as HTMLTextAreaElement;
+    element.style.width = "100%";
+    element.style.minWidth = "0";
+    element.style.minHeight = "96px";
+    element.style.boxSizing = "border-box";
+    element.style.padding = "8px";
+    element.style.borderRadius = "6px";
+    element.style.resize = "vertical";
+    element.style.lineHeight = "1.4";
+  });
 }
 
 function getItemTitle(item?: Zotero.Item): string {
@@ -228,7 +241,7 @@ function renderPane(body: HTMLDivElement, item?: Zotero.Item): void {
 
   if (configSummaryElement) {
     configSummaryElement.textContent =
-      "Model settings UI is ready. Persistence will be added next.";
+      "Model settings and fixed system prompt UI are ready. Persistence will be added next.";
   }
 
   if (contextPreviewElement) {
@@ -325,6 +338,13 @@ export function registerSideAIPane(): false | string {
                   value=""
                   placeholder="sk-..."
                 />
+              </html:div>
+              <html:div class="sideai-config-row">
+                <html:label class="sideai-config-label" for="sideai-system-prompt">Fixed Prompt</html:label>
+                <html:textarea
+                  id="sideai-system-prompt"
+                  class="sideai-config-textarea"
+                >You are an academic reading assistant. Summarize the selected paper content clearly and faithfully.</html:textarea>
               </html:div>
               <html:div class="sideai-pane-actions">
                 <html:button disabled="true">Save Settings</html:button>
