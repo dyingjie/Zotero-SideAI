@@ -48,7 +48,8 @@ import {
   normalizeAIRequestError,
   parseChatCompletionsResponse,
   postChatCompletionsMessages,
-  postChatCompletionsRequest
+  postChatCompletionsRequest,
+  requestChatCompletionsText
 } from "../src/services/ai-request";
 
 describe("startup", function () {
@@ -471,6 +472,30 @@ describe("startup", function () {
       (thrownError as AIRequestError).message,
       "Response format is incompatible."
     );
+  });
+
+  it("should request and return parsed response text", async function () {
+    const result = await requestChatCompletionsText({
+      apiKey: "sk-test",
+      baseUrl: "https://example.com/v1",
+      messages: [{ role: "user", content: "Hello" }],
+      model: "gpt-4.1-mini",
+      fetchFn: async () =>
+        ({
+          ok: true,
+          json: async () => ({
+            choices: [
+              {
+                message: {
+                  content: "Final answer"
+                }
+              }
+            ]
+          })
+        }) as Response
+    });
+
+    assert.strictEqual(result, "Final answer");
   });
 
   it("should clean plugin instance on shutdown", async function () {

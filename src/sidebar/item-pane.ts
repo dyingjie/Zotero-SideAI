@@ -21,6 +21,9 @@ import {
   getMissingConfigMessage
 } from "./send-validation";
 import {
+  requestChatCompletionsText
+} from "../services/ai-request";
+import {
   buildPreviewMessages,
   formatPreviewMessages
 } from "../services/request-preview";
@@ -33,6 +36,7 @@ import {
 const SIDEBAR_PANE_ID = "sideai-panel";
 
 let registeredPaneKey: false | string = false;
+const paneContextStore = new WeakMap<HTMLDivElement, CurrentTextContext>();
 type PaneState = "empty" | "ready" | "loading" | "error";
 
 function applyPaneLayout(body: HTMLDivElement): void {
@@ -480,6 +484,7 @@ function renderPane(body: HTMLDivElement, item?: Zotero.Item): void {
   applyPaneLayout(body);
 
   const currentTextContext = buildCurrentTextContext(item);
+  paneContextStore.set(body, currentTextContext);
   const titleElement = body.querySelector(
     "[data-sideai-role='title']"
   ) as HTMLDivElement | null;
@@ -568,12 +573,15 @@ async function sendCurrentPreview(body: HTMLDivElement): Promise<void> {
   const modelInput = getModelInput(body);
   const systemPromptInput = getSystemPromptInput(body);
   const apiKeyInput = getApiKeyInput(body);
-  const contextPreviewElement = body.querySelector(
-    "[data-sideai-role='context-preview']"
-  ) as HTMLDivElement | null;
   const outputPreviewElement = body.querySelector(
     "[data-sideai-role='output-preview']"
   ) as HTMLDivElement | null;
+  const currentTextContext = paneContextStore.get(body) || {
+    abstractText: "",
+    notesText: "",
+    previewText: "No current text available.",
+    title: "No item selected"
+  };
 
   const missingFields = getMissingConfigFields({
     apiKey: apiKeyInput?.value || "",
@@ -589,7 +597,7 @@ async function sendCurrentPreview(body: HTMLDivElement): Promise<void> {
     return;
   }
 
-  const currentText = contextPreviewElement?.textContent?.trim() || "";
+  const currentText = currentTextContext?.previewText?.trim() || "";
   if (!currentText || currentText === "No current text available.") {
     setPaneState(body, "error", "No current text available to send.");
     return;
@@ -597,22 +605,39 @@ async function sendCurrentPreview(body: HTMLDivElement): Promise<void> {
 
   setPaneState(body, "loading");
   if (outputPreviewElement) {
-    outputPreviewElement.textContent = "Generating preview response...";
+    outputPreviewElement.textContent = "Requesting model response...";
   }
 
-  await Zotero.Promise.delay(400);
+  try {
+    const responseText = await requestChatCompletionsText({
+      apiKey: apiKeyInput?.value || "",
+      baseUrl: baseUrlInput?.value || "",
+      messages: buildPreviewMessages({
+        context: currentTextContext,
+        systemPromptTemplate: systemPromptInput?.value || ""
+      }),
+      model: modelInput?.value || "",
+      timeoutMs: 30000
+    });
 
-  if (outputPreviewElement) {
-    outputPreviewElement.textContent = [
-      "Mock response",
-      "",
-      "This is a placeholder send action.",
-      "Current text has been collected successfully.",
-      "The real API request will be connected in the next phase."
-    ].join("\n");
+    if (outputPreviewElement) {
+      outputPreviewElement.textContent = responseText;
+    }
+
+    setActionStatus(body, "Response received successfully.");
+    setPaneState(body, "ready");
+  } catch (error) {
+    const message =
+      error instanceof Error && error.message.trim()
+        ? error.message.trim()
+        : "Request failed.";
+
+    if (outputPreviewElement) {
+      outputPreviewElement.textContent = `Request failed.\n\n${message}`;
+    }
+
+    setPaneState(body, "error", message);
   }
-
-  setPaneState(body, "ready");
 }
 
 export function registerSideAIPane(): false | string {

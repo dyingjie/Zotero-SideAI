@@ -113,6 +113,22 @@ export async function postChatCompletionsMessages(input: {
   });
 }
 
+export async function requestChatCompletionsText(input: {
+  apiKey: string;
+  baseUrl: string;
+  clearTimeoutFn?: ClearTimeoutFn;
+  fetchFn?: typeof fetch;
+  messages: ChatCompletionMessage[];
+  model: string;
+  setTimeoutFn?: SetTimeoutFn;
+  timeoutMs?: number;
+}): Promise<string> {
+  const response = await postChatCompletionsMessages(input);
+  ensureSuccessfulResponse(response);
+  const data = await response.json();
+  return parseChatCompletionsResponse(data);
+}
+
 export function normalizeAIRequestError(error: unknown): AIRequestError {
   if (error instanceof AIRequestError) {
     return error;
