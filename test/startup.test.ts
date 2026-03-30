@@ -542,6 +542,35 @@ describe("startup", function () {
     assert.strictEqual(clearedTimeoutId, 456 as ReturnType<typeof setTimeout>);
   });
 
+  it("should surface timeout failures during request execution", async function () {
+    let thrownError: unknown;
+
+    try {
+      await postChatCompletionsRequest({
+        apiKey: "sk-test",
+        baseUrl: "https://example.com/v1",
+        body: {
+          messages: [{ role: "user", content: "Hello" }],
+          model: "gpt-4.1-mini"
+        },
+        timeoutMs: 10,
+        fetchFn: async () => {
+          const abortError = new Error("The operation was aborted.");
+          abortError.name = "AbortError";
+          throw abortError;
+        }
+      });
+    } catch (error) {
+      thrownError = error;
+    }
+
+    assert.instanceOf(thrownError, AIRequestError);
+    assert.strictEqual(
+      (thrownError as AIRequestError).message,
+      "Request timed out."
+    );
+  });
+
   it("should normalize request failures and http errors", function () {
     const timeoutError = normalizeAIRequestError(
       Object.assign(new Error("The operation was aborted."), {
