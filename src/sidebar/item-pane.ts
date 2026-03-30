@@ -11,6 +11,11 @@ import {
   saveSystemPrompt
 } from "../settings/system-prompt";
 import { resetSettingsToDefaults } from "../settings/reset";
+import {
+  type ConfigFeedbackTone,
+  getConfigFailureMessage,
+  getConfigSuccessMessage
+} from "./config-feedback";
 
 const SIDEBAR_PANE_ID = "sideai-panel";
 
@@ -33,6 +38,9 @@ function applyPaneLayout(body: HTMLDivElement): void {
   const textareas = body.querySelectorAll(".sideai-config-textarea");
   const outputBadge = body.querySelector(
     "[data-sideai-role='output-badge']"
+  ) as HTMLDivElement | null;
+  const configFeedback = body.querySelector(
+    "[data-sideai-role='config-feedback']"
   ) as HTMLDivElement | null;
 
   if (root) {
@@ -119,6 +127,29 @@ function applyPaneLayout(body: HTMLDivElement): void {
     outputBadge.style.fontSize = "11px";
     outputBadge.style.fontWeight = "600";
     outputBadge.style.background = "var(--fill-tertiary, rgba(0,0,0,0.08))";
+  }
+
+  if (configFeedback) {
+    const tone = configFeedback.dataset.sideaiTone || "neutral";
+    configFeedback.style.padding = "6px 8px";
+    configFeedback.style.borderRadius = "6px";
+    configFeedback.style.fontSize = "12px";
+    configFeedback.style.lineHeight = "1.4";
+    configFeedback.style.whiteSpace = "pre-wrap";
+    configFeedback.style.overflowWrap = "anywhere";
+    configFeedback.style.border = "1px solid var(--fill-tertiary, rgba(0,0,0,0.08))";
+    configFeedback.style.background =
+      tone === "error"
+        ? "rgba(208, 64, 64, 0.12)"
+        : tone === "success"
+          ? "rgba(46, 125, 50, 0.12)"
+          : "var(--fill-quinary, rgba(0,0,0,0.05))";
+    configFeedback.style.color =
+      tone === "error"
+        ? "var(--accent-red, #a12622)"
+        : tone === "success"
+          ? "var(--accent-green, #2e7d32)"
+          : "var(--text-color-deemphasized, #666)";
   }
 
   if (actions) {
@@ -323,13 +354,29 @@ function getSystemPromptInput(body: HTMLDivElement): HTMLTextAreaElement | null 
   return body.querySelector("#sideai-system-prompt") as HTMLTextAreaElement | null;
 }
 
-function setConfigSummary(body: HTMLDivElement, message: string): void {
-  const configSummaryElement = body.querySelector(
-    "[data-sideai-role='config-summary']"
+function setActionStatus(body: HTMLDivElement, message: string): void {
+  const actionStatusElement = body.querySelector(
+    "[data-sideai-role='action-status']"
   ) as HTMLDivElement | null;
 
-  if (configSummaryElement) {
-    configSummaryElement.textContent = message;
+  if (actionStatusElement) {
+    actionStatusElement.textContent = message;
+  }
+}
+
+function setConfigFeedback(
+  body: HTMLDivElement,
+  message: string,
+  tone: ConfigFeedbackTone
+): void {
+  const configFeedbackElement = body.querySelector(
+    "[data-sideai-role='config-feedback']"
+  ) as HTMLDivElement | null;
+
+  if (configFeedbackElement) {
+    configFeedbackElement.dataset.sideaiTone = tone;
+    configFeedbackElement.textContent = message;
+    applyPaneLayout(body);
   }
 }
 
@@ -373,17 +420,18 @@ function persistSettings(body: HTMLDivElement): void {
     saveModel(modelInput.value);
     saveSystemPrompt(systemPromptInput.value);
     saveApiKey(apiKeyInput.value);
-    setConfigSummary(
-      body,
-      "API Key, Base URL, model, and fixed prompt are saved locally."
-    );
+    const message = getConfigSuccessMessage("save");
+    setConfigFeedback(body, message, "success");
+    setActionStatus(body, message);
   } catch (error) {
     Zotero.logError(
       error instanceof Error
         ? error
         : new Error("Unable to save plugin settings.")
     );
-    setConfigSummary(body, "Unable to save settings right now.");
+    const message = getConfigFailureMessage("save", error);
+    setConfigFeedback(body, message, "error");
+    setActionStatus(body, message);
   }
 }
 
@@ -391,14 +439,18 @@ function restoreDefaultSettings(body: HTMLDivElement): void {
   try {
     resetSettingsToDefaults();
     syncSavedSettings(body);
-    setConfigSummary(body, "Settings restored to defaults.");
+    const message = getConfigSuccessMessage("restore");
+    setConfigFeedback(body, message, "success");
+    setActionStatus(body, message);
   } catch (error) {
     Zotero.logError(
       error instanceof Error
         ? error
         : new Error("Unable to restore default settings.")
     );
-    setConfigSummary(body, "Unable to restore defaults right now.");
+    const message = getConfigFailureMessage("restore", error);
+    setConfigFeedback(body, message, "error");
+    setActionStatus(body, message);
   }
 }
 
@@ -407,9 +459,6 @@ function renderPane(body: HTMLDivElement, item?: Zotero.Item): void {
 
   const titleElement = body.querySelector(
     "[data-sideai-role='title']"
-  ) as HTMLDivElement | null;
-  const configSummaryElement = body.querySelector(
-    "[data-sideai-role='config-summary']"
   ) as HTMLDivElement | null;
   const contextPreviewElement = body.querySelector(
     "[data-sideai-role='context-preview']"
@@ -423,15 +472,16 @@ function renderPane(body: HTMLDivElement, item?: Zotero.Item): void {
     titleElement.textContent = getItemTitle(item);
   }
 
-  if (configSummaryElement) {
-    configSummaryElement.textContent =
-      getSavedApiKey() ||
+  setConfigFeedback(
+    body,
+    getSavedApiKey() ||
       getSavedBaseUrl() !== getDefaultBaseUrl() ||
       getSavedModel() !== getDefaultModel() ||
       getSavedSystemPrompt() !== getDefaultSystemPrompt()
-        ? "Saved API Key, Base URL, model, and fixed prompt are loaded from local settings."
-        : "API Key, Base URL, model, and fixed prompt are not saved yet.";
-  }
+      ? "Saved API Key, Base URL, model, and fixed prompt are loaded from local settings."
+      : "API Key, Base URL, model, and fixed prompt are not saved yet.",
+    "neutral"
+  );
 
   if (contextPreviewElement) {
     contextPreviewElement.textContent = buildCurrentTextPreview(item);
@@ -572,7 +622,7 @@ export function registerSideAIPane(): false | string {
                 <html:button data-sideai-role="save-settings-button">Save Settings</html:button>
                 <html:button data-sideai-role="reset-settings-button">Restore Defaults</html:button>
               </html:div>
-              <html:div class="sideai-pane-muted" data-sideai-role="config-summary"></html:div>
+              <html:div data-sideai-role="config-feedback" data-sideai-tone="neutral"></html:div>
             </html:div>
           </html:div>
         </html:div>

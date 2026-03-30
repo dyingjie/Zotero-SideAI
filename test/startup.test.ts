@@ -17,6 +17,10 @@ import {
   saveSystemPrompt
 } from "../src/settings/system-prompt";
 import { resetSettingsToDefaults } from "../src/settings/reset";
+import {
+  getConfigFailureMessage,
+  getConfigSuccessMessage
+} from "../src/sidebar/config-feedback";
 
 describe("startup", function () {
   it("should register plugin instance on Zotero", function () {
@@ -91,6 +95,21 @@ describe("startup", function () {
     assert.strictEqual(getSavedBaseUrl(), getDefaultBaseUrl());
     assert.strictEqual(getSavedModel(), getDefaultModel());
     assert.strictEqual(getSavedSystemPrompt(), getDefaultSystemPrompt());
+  });
+
+  it("should build config feedback messages for save failures", function () {
+    assert.strictEqual(
+      getConfigFailureMessage("save"),
+      "Unable to save settings right now."
+    );
+    assert.strictEqual(
+      getConfigFailureMessage("save", new Error("Disk write failed.")),
+      "Unable to save settings right now. Disk write failed."
+    );
+    assert.strictEqual(
+      getConfigSuccessMessage("save"),
+      "API Key, Base URL, model, and fixed prompt are saved locally."
+    );
   });
 
   it("should clean plugin instance on shutdown", async function () {
