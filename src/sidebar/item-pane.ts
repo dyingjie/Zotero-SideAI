@@ -20,7 +20,11 @@ import {
   getMissingConfigFields,
   getMissingConfigMessage
 } from "./send-validation";
-import { mergeNotePreviewTexts } from "./context-preview";
+import {
+  buildPreviewTextFromContext,
+  type CurrentTextContext,
+  mergeNotePreviewTexts
+} from "./context-preview";
 
 const SIDEBAR_PANE_ID = "sideai-panel";
 
@@ -229,40 +233,47 @@ function getItemTitle(item?: Zotero.Item): string {
     : "Untitled item";
 }
 
-function buildCurrentTextPreview(item?: Zotero.Item): string {
+function buildCurrentTextContext(item?: Zotero.Item): CurrentTextContext {
   if (!item) {
-    return "No current text available.";
+    return {
+      abstractText: "",
+      notesText: "",
+      previewText: "No current text available.",
+      title: "No item selected"
+    };
   }
 
-  const sections: string[] = [];
   const title = getItemTitle(item);
-  if (title && title !== "Untitled item") {
-    sections.push(`Title:\n${title}`);
-  }
-
   const abstractText = item.getField("abstractNote");
-  if (typeof abstractText === "string" && abstractText.trim()) {
-    sections.push(`Abstract:\n${abstractText.trim()}`);
-  }
-
   const noteIDs =
     typeof item.getNotes === "function" ? (item.getNotes() as number[]) : [];
+  const normalizedAbstractText =
+    typeof abstractText === "string" ? abstractText.trim() : "";
+  let notesText = "";
+
   if (noteIDs.length) {
     const noteItems = Zotero.Items.get(noteIDs) as Zotero.Item[];
-    const notePreview = mergeNotePreviewTexts(
+    notesText = mergeNotePreviewTexts(
       noteItems.map((noteItem) => noteItem.getNote?.() || "")
     );
-
-    if (notePreview) {
-      sections.push(`Notes:\n${notePreview}`);
-    }
   }
 
-  if (!sections.length) {
-    return "Selected item has no previewable text yet.";
-  }
+  const previewText = buildPreviewTextFromContext({
+    abstractText: normalizedAbstractText,
+    notesText,
+    title
+  });
 
-  return sections.join("\n\n");
+  return {
+    abstractText: normalizedAbstractText,
+    notesText,
+    previewText: previewText || "Selected item has no previewable text yet.",
+    title
+  };
+}
+
+function buildCurrentTextPreview(item?: Zotero.Item): string {
+  return buildCurrentTextContext(item).previewText;
 }
 
 function setPaneState(

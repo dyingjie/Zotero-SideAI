@@ -26,6 +26,7 @@ import {
   getMissingConfigMessage
 } from "../src/sidebar/send-validation";
 import {
+  buildPreviewTextFromContext,
   mergeNotePreviewTexts,
   stripHtml
 } from "../src/sidebar/context-preview";
@@ -146,6 +147,28 @@ describe("startup", function () {
         "<p>Third note</p>"
       ]),
       "First note\n\nSecond note\n\nThird note"
+    );
+  });
+
+  it("should build unified preview text from context object", function () {
+    assert.strictEqual(
+      buildPreviewTextFromContext({
+        abstractText: "Abstract text",
+        notesText: "Note one\n\nNote two",
+        title: "Paper title"
+      }),
+      [
+        "Title:",
+        "Paper title",
+        "",
+        "Abstract:",
+        "Abstract text",
+        "",
+        "Notes:",
+        "Note one",
+        "",
+        "Note two"
+      ].join("\n")
     );
   });
 
