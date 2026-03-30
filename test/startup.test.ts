@@ -6,6 +6,11 @@ import {
   getSavedBaseUrl,
   saveBaseUrl
 } from "../src/settings/base-url";
+import {
+  getDefaultModel,
+  getSavedModel,
+  saveModel
+} from "../src/settings/model";
 
 describe("startup", function () {
   it("should register plugin instance on Zotero", function () {
@@ -40,6 +45,18 @@ describe("startup", function () {
 
     saveBaseUrl("https://example.com/v1");
     assert.strictEqual(getSavedBaseUrl(), "https://example.com/v1");
+
+    Zotero.Prefs.clear(prefKey, true);
+  });
+
+  it("should persist model in Zotero prefs", function () {
+    const prefKey = `${config.prefsPrefix}.model`;
+
+    Zotero.Prefs.clear(prefKey, true);
+    assert.strictEqual(getSavedModel(), getDefaultModel());
+
+    saveModel("gpt-4.1");
+    assert.strictEqual(getSavedModel(), "gpt-4.1");
 
     Zotero.Prefs.clear(prefKey, true);
   });

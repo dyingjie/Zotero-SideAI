@@ -4,6 +4,7 @@ import {
   getSavedBaseUrl,
   saveBaseUrl
 } from "../settings/base-url";
+import { getDefaultModel, getSavedModel, saveModel } from "../settings/model";
 
 const SIDEBAR_PANE_ID = "sideai-panel";
 
@@ -308,6 +309,10 @@ function getBaseUrlInput(body: HTMLDivElement): HTMLInputElement | null {
   return body.querySelector("#sideai-baseurl") as HTMLInputElement | null;
 }
 
+function getModelInput(body: HTMLDivElement): HTMLInputElement | null {
+  return body.querySelector("#sideai-model") as HTMLInputElement | null;
+}
+
 function setConfigSummary(body: HTMLDivElement, message: string): void {
   const configSummaryElement = body.querySelector(
     "[data-sideai-role='config-summary']"
@@ -320,10 +325,15 @@ function setConfigSummary(body: HTMLDivElement, message: string): void {
 
 function syncSavedSettings(body: HTMLDivElement): void {
   const baseUrlInput = getBaseUrlInput(body);
+  const modelInput = getModelInput(body);
   const apiKeyInput = getApiKeyInput(body);
 
   if (baseUrlInput) {
     baseUrlInput.value = getSavedBaseUrl();
+  }
+
+  if (modelInput) {
+    modelInput.value = getSavedModel();
   }
 
   if (!apiKeyInput) {
@@ -335,18 +345,20 @@ function syncSavedSettings(body: HTMLDivElement): void {
 
 function persistSettings(body: HTMLDivElement): void {
   const baseUrlInput = getBaseUrlInput(body);
+  const modelInput = getModelInput(body);
   const apiKeyInput = getApiKeyInput(body);
 
-  if (!baseUrlInput || !apiKeyInput) {
+  if (!baseUrlInput || !modelInput || !apiKeyInput) {
     return;
   }
 
   try {
     saveBaseUrl(baseUrlInput.value);
+    saveModel(modelInput.value);
     saveApiKey(apiKeyInput.value);
     setConfigSummary(
       body,
-      "API Key and Base URL saved locally. Persistence for other settings will be added next."
+      "API Key, Base URL, and model are saved locally. Persistence for other settings will be added next."
     );
   } catch (error) {
     Zotero.logError(
@@ -381,9 +393,11 @@ function renderPane(body: HTMLDivElement, item?: Zotero.Item): void {
 
   if (configSummaryElement) {
     configSummaryElement.textContent =
-      getSavedApiKey() || getSavedBaseUrl() !== getDefaultBaseUrl()
-        ? "Saved API Key and Base URL are loaded from local settings. Persistence for other settings is still pending."
-        : "API Key and Base URL are not saved yet. Other settings persistence will be added later.";
+      getSavedApiKey() ||
+      getSavedBaseUrl() !== getDefaultBaseUrl() ||
+      getSavedModel() !== getDefaultModel()
+        ? "Saved API Key, Base URL, and model are loaded from local settings. Persistence for other settings is still pending."
+        : "API Key, Base URL, and model are not saved yet. Other settings persistence will be added later.";
   }
 
   if (contextPreviewElement) {
@@ -501,7 +515,7 @@ export function registerSideAIPane(): false | string {
                   id="sideai-model"
                   class="sideai-config-input"
                   type="text"
-                  value="gpt-4.1-mini"
+                  value="${getDefaultModel()}"
                 />
               </html:div>
               <html:div class="sideai-config-row">
