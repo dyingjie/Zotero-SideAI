@@ -40,7 +40,10 @@ import {
   buildPreviewMessages,
   formatPreviewMessages
 } from "../src/services/request-preview";
-import { postChatCompletionsRequest } from "../src/services/ai-request";
+import {
+  buildChatCompletionsEndpoint,
+  postChatCompletionsRequest
+} from "../src/services/ai-request";
 
 describe("startup", function () {
   it("should register plugin instance on Zotero", function () {
@@ -301,11 +304,11 @@ describe("startup", function () {
 
     const response = await postChatCompletionsRequest({
       apiKey: " sk-test ",
+      baseUrl: "https://example.com/v1/",
       body: {
         messages: [{ role: "user", content: "Hello" }],
         model: "gpt-4.1-mini"
       },
-      endpoint: "https://example.com/v1/chat/completions",
       fetchFn: async (url, options) => {
         capturedUrl = String(url);
         capturedOptions = options;
@@ -326,6 +329,17 @@ describe("startup", function () {
       },
       method: "POST"
     });
+  });
+
+  it("should build chat completions endpoint from custom baseURL", function () {
+    assert.strictEqual(
+      buildChatCompletionsEndpoint("https://example.com/v1/"),
+      "https://example.com/v1/chat/completions"
+    );
+    assert.strictEqual(
+      buildChatCompletionsEndpoint("https://example.com/proxy/openai"),
+      "https://example.com/proxy/openai/chat/completions"
+    );
   });
 
   it("should clean plugin instance on shutdown", async function () {

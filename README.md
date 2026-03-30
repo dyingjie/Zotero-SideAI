@@ -142,6 +142,7 @@ src/
 - 当前固定提示词已支持基础变量替换，如 `{{title}}`、`{{abstractText}}`、`{{notesText}}`
 - 当前侧边栏已在发送前显示最终请求预览，便于开发期调试 `system/user` 消息
 - 当前服务层已封装统一的 Chat Completions POST 请求入口
+- 当前请求服务已支持从自定义 `baseURL` 组装 `/chat/completions` 地址
 - 当前 `Send` 按钮已接入 mock 发送流程，可驱动 loading 和输出占位结果
 - 当前响应结果区域已包含结果标题、状态标记和独立输出容器
 - 后续会在这个面板里继续接入设置、上下文预览和发送按钮
