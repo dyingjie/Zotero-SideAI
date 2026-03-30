@@ -107,6 +107,17 @@ src/
 
 目前还没有正式的 Zotero 插件代码骨架，接下来会先完成基础项目结构与插件入口搭建。
 
+目前已经包含最小插件骨架文件：
+
+- `package.json`
+- `tsconfig.json`
+- `zotero-plugin.config.ts`
+- `addon/bootstrap.js`
+- `addon/manifest.json`
+- `src/index.ts`
+- `src/addon.ts`
+- `src/hooks.ts`
+
 ## 开发原则
 
 第一版优先目标不是功能堆积，而是先把主闭环做稳：
