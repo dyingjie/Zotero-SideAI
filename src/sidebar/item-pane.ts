@@ -1,6 +1,7 @@
 const SIDEBAR_PANE_ID = "sideai-panel";
 
 let registeredPaneKey: false | string = false;
+type PaneState = "empty" | "ready" | "loading" | "error";
 
 function getItemTitle(item?: Zotero.Item): string {
   if (!item) {
@@ -11,6 +12,50 @@ function getItemTitle(item?: Zotero.Item): string {
   return typeof title === "string" && title.trim()
     ? title.trim()
     : "Untitled item";
+}
+
+function setPaneState(
+  body: HTMLDivElement,
+  state: PaneState,
+  message?: string
+): void {
+  const stateElement = body.querySelector(
+    "[data-sideai-role='panel-state']"
+  ) as HTMLDivElement | null;
+  const actionStatusElement = body.querySelector(
+    "[data-sideai-role='action-status']"
+  ) as HTMLDivElement | null;
+  const sendButton = body.querySelector(
+    "[data-sideai-role='send-button']"
+  ) as HTMLButtonElement | null;
+
+  body.setAttribute("data-sideai-state", state);
+
+  if (stateElement) {
+    stateElement.textContent =
+      state === "empty"
+        ? "No item selected."
+        : state === "loading"
+          ? "Loading..."
+          : state === "error"
+            ? `Error: ${message || "Unknown error"}`
+            : "Ready";
+  }
+
+  if (actionStatusElement) {
+    actionStatusElement.textContent =
+      state === "empty"
+        ? "Select an item to begin."
+        : state === "loading"
+          ? "Request is loading."
+          : state === "error"
+            ? message || "Something went wrong."
+            : "Panel ready. Send action is not wired yet.";
+  }
+
+  if (sendButton) {
+    sendButton.disabled = state !== "ready";
+  }
 }
 
 function renderPane(body: HTMLDivElement, item?: Zotero.Item): void {
@@ -26,9 +71,7 @@ function renderPane(body: HTMLDivElement, item?: Zotero.Item): void {
   const outputPreviewElement = body.querySelector(
     "[data-sideai-role='output-preview']"
   ) as HTMLDivElement | null;
-  const actionStatusElement = body.querySelector(
-    "[data-sideai-role='action-status']"
-  ) as HTMLDivElement | null;
+  const hasItem = !!item;
 
   if (titleElement) {
     titleElement.textContent = getItemTitle(item);
@@ -46,13 +89,17 @@ function renderPane(body: HTMLDivElement, item?: Zotero.Item): void {
 
   if (outputPreviewElement) {
     outputPreviewElement.textContent =
-      "AI response output will appear in this area after sending a request.";
+      hasItem
+        ? "AI response output will appear in this area after sending a request."
+        : "No output yet.";
   }
 
-  if (actionStatusElement) {
-    actionStatusElement.textContent =
-      item ? "Panel ready. Send action is not wired yet." : "Select an item to begin.";
+  if (!hasItem) {
+    setPaneState(body, "empty");
+    return;
   }
+
+  setPaneState(body, "ready");
 }
 
 export function registerSideAIPane(): false | string {
@@ -73,6 +120,7 @@ export function registerSideAIPane(): false | string {
     },
     bodyXHTML: `
       <html:div class="sideai-pane-root">
+        <html:div class="sideai-pane-state" data-sideai-role="panel-state">Loading...</html:div>
         <html:div class="sideai-pane-section">
           <html:div class="sideai-pane-label">Configuration</html:div>
           <html:div class="sideai-pane-card" data-sideai-role="config-summary"></html:div>
@@ -91,7 +139,7 @@ export function registerSideAIPane(): false | string {
         <html:div class="sideai-pane-section">
           <html:div class="sideai-pane-label">Actions</html:div>
           <html:div class="sideai-pane-actions">
-            <html:button disabled="true">Send</html:button>
+            <html:button data-sideai-role="send-button" disabled="true">Send</html:button>
             <html:button disabled="true">Copy</html:button>
             <html:button disabled="true">Clear</html:button>
           </html:div>
