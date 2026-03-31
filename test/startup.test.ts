@@ -1494,6 +1494,43 @@ describe("startup", function () {
     assert.deepEqual(errorMessage.retryMessages, retryMessages);
   });
 
+  it("should support interrupted failure flow followed by retry-ready error state", function () {
+    const retryMessages = [
+      { role: "system", content: "System prompt" },
+      { role: "user", content: "Question body" }
+    ];
+    const loadingMessage = buildChatMessageEntry({
+      content: "Requesting model response...",
+      mode: "text",
+      role: "status",
+      tone: "loading"
+    });
+    const failedMessage = buildChatMessageEntry({
+      content: "Request failed.\n\nRequest timed out.",
+      mode: "text",
+      role: "status",
+      retryMessages,
+      retryModel: "gpt-5.4",
+      tone: "error"
+    });
+
+    const duringRequest = appendChatMessage([], loadingMessage);
+    assert.strictEqual(shouldStartSendRequest("loading"), false);
+    assert.strictEqual(duringRequest[0].tone, "loading");
+
+    const afterFailure = appendChatMessage(
+      removeLoadingChatMessages(duringRequest),
+      failedMessage
+    );
+
+    assert.strictEqual(afterFailure.length, 1);
+    assert.strictEqual(afterFailure[0].tone, "error");
+    assert.strictEqual(afterFailure[0].retryModel, "gpt-5.4");
+    assert.deepEqual(afterFailure[0].retryMessages, retryMessages);
+    assert.strictEqual(shouldEnableSendButton("error"), true);
+    assert.strictEqual(shouldStartSendRequest("error"), true);
+  });
+
   it("should serialize and restore persisted item chat sessions safely", function () {
     const persisted = {
       chats: {
