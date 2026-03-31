@@ -34,6 +34,12 @@ import {
 } from "./context-preview";
 import { renderMarkdownPreviewHtml } from "./output-render";
 import {
+  getItemSessionHistory,
+  getItemSessionKey,
+  setItemSessionHistory,
+  type ItemSessionMap
+} from "./item-session";
+import {
   appendHistoryEntry,
   buildHistoryEntry,
   type OutputRenderMode,
@@ -52,10 +58,18 @@ const OUTPUT_PLACEHOLDER =
 
 let registeredPaneKey: false | string = false;
 const paneContextStore = new WeakMap<HTMLDivElement, CurrentTextContext>();
-const paneHistoryStore = new WeakMap<HTMLDivElement, SessionHistoryEntry[]>();
+const paneSessionStore = new WeakMap<HTMLDivElement, ItemSessionMap>();
+const paneActiveSessionKeyStore = new WeakMap<HTMLDivElement, string | null>();
+
+function getSessionMap(body: HTMLDivElement): ItemSessionMap {
+  return paneSessionStore.get(body) || {};
+}
 
 function getSessionHistory(body: HTMLDivElement): SessionHistoryEntry[] {
-  return paneHistoryStore.get(body) || [];
+  return getItemSessionHistory(
+    getSessionMap(body),
+    paneActiveSessionKeyStore.get(body) || null
+  );
 }
 
 function pushSessionHistory(
@@ -63,7 +77,14 @@ function pushSessionHistory(
   entry: SessionHistoryEntry
 ): SessionHistoryEntry[] {
   const nextHistory = appendHistoryEntry(getSessionHistory(body), entry);
-  paneHistoryStore.set(body, nextHistory);
+  paneSessionStore.set(
+    body,
+    setItemSessionHistory(
+      getSessionMap(body),
+      paneActiveSessionKeyStore.get(body) || null,
+      nextHistory
+    )
+  );
   return nextHistory;
 }
 
@@ -718,6 +739,11 @@ function renderPane(body: HTMLDivElement, item?: Zotero.Item): void {
   applyPaneLayout(body);
 
   const currentTextContext = buildCurrentTextContext(item);
+  const sessionKey = getItemSessionKey(item);
+  paneActiveSessionKeyStore.set(body, sessionKey);
+  if (!paneSessionStore.has(body)) {
+    paneSessionStore.set(body, {});
+  }
   paneContextStore.set(body, currentTextContext);
   const titleElement = body.querySelector(
     "[data-sideai-role='title']"
@@ -763,17 +789,22 @@ function renderPane(body: HTMLDivElement, item?: Zotero.Item): void {
       : "Select an item to inspect the final request preview.";
   }
 
+  const latestSessionEntry = getSessionHistory(body)[0];
   if (outputPreviewElement) {
-    setOutputPreviewContent(
-      body,
-      hasItem
-        ? OUTPUT_PLACEHOLDER
-        : "No output yet."
-    );
-  }
-
-  if (!paneHistoryStore.has(body)) {
-    paneHistoryStore.set(body, []);
+    if (latestSessionEntry) {
+      setOutputPreviewContent(
+        body,
+        latestSessionEntry.content,
+        latestSessionEntry.mode
+      );
+    } else {
+      setOutputPreviewContent(
+        body,
+        hasItem
+          ? OUTPUT_PLACEHOLDER
+          : "No output yet."
+      );
+    }
   }
   renderHistoryList(body);
 
@@ -811,7 +842,7 @@ function copyOutput(body: HTMLDivElement): void {
 
 function clearOutput(body: HTMLDivElement): void {
   setOutputPreviewContent(body, OUTPUT_PLACEHOLDER);
-  setActionStatus(body, "Current session output cleared.");
+  setActionStatus(body, "Current item session output cleared.");
   setPaneState(body, "ready");
 }
 

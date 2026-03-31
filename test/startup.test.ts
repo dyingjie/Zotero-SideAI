@@ -48,6 +48,11 @@ import {
   MAX_HISTORY_ITEMS
 } from "../src/sidebar/session-history";
 import {
+  getItemSessionHistory,
+  getItemSessionKey,
+  setItemSessionHistory
+} from "../src/sidebar/item-session";
+import {
   escapeHtml,
   highlightCode,
   parseMarkdownBlocks,
@@ -827,6 +832,32 @@ describe("startup", function () {
     assert.strictEqual(history.length, MAX_HISTORY_ITEMS);
     assert.strictEqual(history[0].content, "Newest item");
     assert.strictEqual(history[0].status, "error");
+  });
+
+  it("should isolate session history by Zotero item id", function () {
+    const itemA = { id: 101 } as Zotero.Item;
+    const itemB = { id: 202 } as Zotero.Item;
+    const sessionA = buildHistoryEntry({
+      content: "Item A answer",
+      mode: "text",
+      status: "success"
+    });
+    const sessionB = buildHistoryEntry({
+      content: "Item B answer",
+      mode: "markdown",
+      status: "error"
+    });
+
+    let sessions = setItemSessionHistory({}, getItemSessionKey(itemA), [sessionA]);
+    sessions = setItemSessionHistory(sessions, getItemSessionKey(itemB), [sessionB]);
+
+    assert.deepEqual(getItemSessionHistory(sessions, getItemSessionKey(itemA)), [
+      sessionA
+    ]);
+    assert.deepEqual(getItemSessionHistory(sessions, getItemSessionKey(itemB)), [
+      sessionB
+    ]);
+    assert.deepEqual(getItemSessionHistory(sessions, null), []);
   });
 
   it("should clean plugin instance on shutdown", async function () {
