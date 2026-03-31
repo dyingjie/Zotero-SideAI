@@ -1,0 +1,59 @@
+export type PaneContextSource = "item" | "pdf-reader";
+
+export type PaneContextItemLike = {
+  id?: number;
+  parentItemID?: number | false;
+  isPDFAttachment?: () => boolean;
+};
+
+export type PaneContextResolution = {
+  source: PaneContextSource;
+  sourceLabel: string;
+  item?: PaneContextItemLike;
+  parentItem?: PaneContextItemLike;
+  pdfAttachmentItem?: PaneContextItemLike;
+};
+
+export function resolvePaneContext(options: {
+  item?: PaneContextItemLike;
+  tabType?: string;
+  readerItem?: PaneContextItemLike;
+  resolveParentItem?: (itemID: number) => PaneContextItemLike | undefined;
+}): PaneContextResolution {
+  const currentItem = options.readerItem || options.item;
+
+  if (!currentItem) {
+    return {
+      source: "item",
+      sourceLabel: "Item Context"
+    };
+  }
+
+  const isPDFReader =
+    options.tabType === "reader" &&
+    typeof currentItem.isPDFAttachment === "function" &&
+    currentItem.isPDFAttachment();
+
+  if (!isPDFReader) {
+    return {
+      source: "item",
+      sourceLabel: "Item Context",
+      item: currentItem
+    };
+  }
+
+  const parentItemID =
+    typeof currentItem.parentItemID === "number" ? currentItem.parentItemID : undefined;
+  const parentItem =
+    typeof parentItemID === "number" && options.resolveParentItem
+      ? options.resolveParentItem(parentItemID)
+      : undefined;
+
+  return {
+    source: "pdf-reader",
+    sourceLabel: "PDF Context",
+    item: parentItem || currentItem,
+    parentItem,
+    pdfAttachmentItem: currentItem
+  };
+}

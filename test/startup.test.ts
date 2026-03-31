@@ -55,6 +55,7 @@ import {
   stripHtml,
   truncatePreviewText
 } from "../src/sidebar/context-preview";
+import { resolvePaneContext } from "../src/sidebar/pane-context";
 import {
   appendHistoryEntry,
   buildHistoryEntry,
@@ -331,6 +332,28 @@ describe("startup", function () {
     );
 
     assert.strictEqual(mergeNotePreviewTexts(["", "   ", "<p></p>"]), "");
+  });
+
+  it("should recognize pdf reader context and resolve parent item as active context", function () {
+    const parentItem = { id: 1 };
+    const pdfAttachment = {
+      id: 2,
+      parentItemID: 1,
+      isPDFAttachment: () => true
+    };
+
+    const result = resolvePaneContext({
+      item: parentItem,
+      readerItem: pdfAttachment,
+      resolveParentItem: (itemID) => (itemID === 1 ? parentItem : undefined),
+      tabType: "reader"
+    });
+
+    assert.strictEqual(result.source, "pdf-reader");
+    assert.strictEqual(result.sourceLabel, "PDF Context");
+    assert.strictEqual(result.item, parentItem);
+    assert.strictEqual(result.parentItem, parentItem);
+    assert.strictEqual(result.pdfAttachmentItem, pdfAttachment);
   });
 
   it("should adapt pane layout for narrow Zotero sidebar widths", function () {

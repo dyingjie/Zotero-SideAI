@@ -76,6 +76,7 @@ import {
   shouldEnableSendButton,
   shouldStartSendRequest
 } from "./pane-state";
+import { resolvePaneContext } from "./pane-context";
 
 const SIDEBAR_PANE_ID = "sideai-panel";
 const OUTPUT_PLACEHOLDER =
@@ -1156,11 +1157,50 @@ function restoreDefaultPromptPresets(body: HTMLDivElement): void {
   }
 }
 
-function renderPane(body: HTMLDivElement, item?: Zotero.Item): void {
+function getReaderAttachmentItem(): Zotero.Item | undefined {
+  try {
+    const selectedTabID = Zotero.getMainWindow()?.Zotero_Tabs?.selectedID;
+    if (!selectedTabID) {
+      return undefined;
+    }
+
+    const reader = Zotero.Reader.getByTabID(selectedTabID);
+    return reader?._item;
+  } catch {
+    return undefined;
+  }
+}
+
+function resolveActivePaneItem(
+  item: Zotero.Item | undefined,
+  tabType: string
+): {
+  activeItem?: Zotero.Item;
+  sourceLabel: string;
+} {
+  const paneContext = resolvePaneContext({
+    item,
+    readerItem: getReaderAttachmentItem(),
+    resolveParentItem: (itemID: number) => Zotero.Items.get(itemID) as Zotero.Item,
+    tabType
+  });
+
+  return {
+    activeItem: paneContext.item as Zotero.Item | undefined,
+    sourceLabel: paneContext.sourceLabel
+  };
+}
+
+function renderPane(
+  body: HTMLDivElement,
+  item: Zotero.Item | undefined,
+  tabType: string
+): void {
   applyPaneLayout(body);
 
-  const currentTextContext = buildCurrentTextContext(item);
-  const sessionKey = getItemSessionKey(item);
+  const paneItem = resolveActivePaneItem(item, tabType);
+  const currentTextContext = buildCurrentTextContext(paneItem.activeItem);
+  const sessionKey = getItemSessionKey(paneItem.activeItem);
   paneActiveSessionKeyStore.set(body, sessionKey);
   if (!paneSessionStore.has(body)) {
     paneSessionStore.set(body, loadPersistedChatSessions().history);
@@ -1181,10 +1221,12 @@ function renderPane(body: HTMLDivElement, item?: Zotero.Item): void {
   const outputPreviewElement = body.querySelector(
     "[data-sideai-role='output-preview']"
   ) as HTMLDivElement | null;
-  const hasItem = !!item;
+  const hasItem = !!paneItem.activeItem;
 
   if (titleElement) {
-    titleElement.textContent = getItemTitle(item);
+    titleElement.textContent = hasItem
+      ? `${getItemTitle(paneItem.activeItem)} (${paneItem.sourceLabel})`
+      : getItemTitle(paneItem.activeItem);
   }
 
   setConfigFeedback(
@@ -1676,12 +1718,13 @@ export function registerSideAIPane(): false | string {
       });
     },
     onItemChange: ({ item, setEnabled, tabType }) => {
-      setEnabled(tabType === "library" && !!item);
+      setEnabled((tabType === "library" || tabType === "reader") && !!item);
       return true;
     },
-    onRender: ({ body, item, setSectionSummary }) => {
-      renderPane(body, item);
-      setSectionSummary(getItemTitle(item));
+    onRender: ({ body, item, setSectionSummary, tabType }) => {
+      const paneItem = resolveActivePaneItem(item, tabType);
+      renderPane(body, item, tabType);
+      setSectionSummary(getItemTitle(paneItem.activeItem));
     }
   });
 
