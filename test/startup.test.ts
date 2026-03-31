@@ -53,6 +53,10 @@ import {
   removeLoadingChatMessages
 } from "../src/sidebar/chat-stream";
 import {
+  deserializeChatSessions,
+  serializeChatSessions
+} from "../src/sidebar/chat-session-storage";
+import {
   getItemSessionHistory,
   getItemSessionKey,
   setItemSessionHistory
@@ -936,6 +940,39 @@ describe("startup", function () {
     assert.strictEqual(errorMessage.tone, "error");
     assert.strictEqual(errorMessage.retryModel, "gpt-5.4");
     assert.deepEqual(errorMessage.retryMessages, retryMessages);
+  });
+
+  it("should serialize and restore persisted item chat sessions safely", function () {
+    const persisted = {
+      chats: {
+        "item:1": [
+          buildChatMessageEntry({
+            content: "Hello",
+            mode: "text",
+            role: "user"
+          })
+        ]
+      },
+      history: {
+        "item:1": [
+          buildHistoryEntry({
+            content: "Answer",
+            mode: "markdown",
+            status: "success"
+          })
+        ]
+      }
+    };
+
+    const serialized = serializeChatSessions(persisted);
+    const restored = deserializeChatSessions(serialized);
+
+    assert.strictEqual(restored.chats["item:1"][0].content, "Hello");
+    assert.strictEqual(restored.history["item:1"][0].content, "Answer");
+    assert.deepEqual(deserializeChatSessions("{invalid"), {
+      chats: {},
+      history: {}
+    });
   });
 
   it("should clean plugin instance on shutdown", async function () {

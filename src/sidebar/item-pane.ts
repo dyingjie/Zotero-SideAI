@@ -47,6 +47,10 @@ import {
   type ItemSessionMap
 } from "./item-session";
 import {
+  loadPersistedChatSessions,
+  savePersistedChatSessions
+} from "./chat-session-storage";
+import {
   appendHistoryEntry,
   buildHistoryEntry,
   type OutputRenderMode,
@@ -100,14 +104,19 @@ function pushSessionHistory(
   entry: SessionHistoryEntry
 ): SessionHistoryEntry[] {
   const nextHistory = appendHistoryEntry(getSessionHistory(body), entry);
+  const nextSessionMap = setItemSessionHistory(
+    getSessionMap(body),
+    paneActiveSessionKeyStore.get(body) || null,
+    nextHistory
+  );
   paneSessionStore.set(
     body,
-    setItemSessionHistory(
-      getSessionMap(body),
-      paneActiveSessionKeyStore.get(body) || null,
-      nextHistory
-    )
+    nextSessionMap
   );
+  savePersistedChatSessions({
+    chats: getChatSessionMap(body),
+    history: nextSessionMap
+  });
   return nextHistory;
 }
 
@@ -115,14 +124,19 @@ function setChatMessages(
   body: HTMLDivElement,
   messages: ChatMessageEntry[]
 ): ChatMessageEntry[] {
+  const nextChatMap = setItemSessionHistory(
+    getChatSessionMap(body),
+    paneActiveSessionKeyStore.get(body) || null,
+    messages
+  );
   paneChatStore.set(
     body,
-    setItemSessionHistory(
-      getChatSessionMap(body),
-      paneActiveSessionKeyStore.get(body) || null,
-      messages
-    )
+    nextChatMap
   );
+  savePersistedChatSessions({
+    chats: nextChatMap,
+    history: getSessionMap(body)
+  });
 
   return messages;
 }
@@ -955,10 +969,10 @@ function renderPane(body: HTMLDivElement, item?: Zotero.Item): void {
   const sessionKey = getItemSessionKey(item);
   paneActiveSessionKeyStore.set(body, sessionKey);
   if (!paneSessionStore.has(body)) {
-    paneSessionStore.set(body, {});
+    paneSessionStore.set(body, loadPersistedChatSessions().history);
   }
   if (!paneChatStore.has(body)) {
-    paneChatStore.set(body, {});
+    paneChatStore.set(body, loadPersistedChatSessions().chats);
   }
   paneContextStore.set(body, currentTextContext);
   const titleElement = body.querySelector(
