@@ -1,0 +1,36 @@
+<vbox xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
+  xmlns:html="http://www.w3.org/1999/xhtml"
+  flex="1">
+  <groupbox>
+    <label value="SideAI 设置" />
+    <html:div style="display:flex;flex-direction:column;gap:8px;padding:8px 0;">
+      <html:label for="sideai-pref-baseurl">Base URL</html:label>
+      <html:input
+        id="sideai-pref-baseurl"
+        type="text"
+        style="width:100%;box-sizing:border-box;"
+      />
+      <html:div style="font-size:12px;color:#666;">
+        只填写到 <html:code>/v1</html:code>，不要手动加 <html:code>/chat/completions</html:code>
+      </html:div>
+      <html:label for="sideai-pref-model">模型</html:label>
+      <html:input
+        id="sideai-pref-model"
+        type="text"
+        style="width:100%;box-sizing:border-box;"
+      />
+      <html:label for="sideai-pref-apikey">API Key</html:label>
+      <html:input
+        id="sideai-pref-apikey"
+        type="password"
+        placeholder="sk-..."
+        style="width:100%;box-sizing:border-box;"
+      />
+      <html:div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <html:button id="sideai-pref-save" type="button">保存设置</html:button>
+        <html:button id="sideai-pref-reset" type="button">恢复默认</html:button>
+      </html:div>
+      <html:div id="sideai-pref-status" style="font-size:12px;color:#666;"></html:div>
+    </html:div>
+  </groupbox>
+</vbox>

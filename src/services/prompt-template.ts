@@ -7,7 +7,7 @@ export function renderPromptTemplate(
   const variables: Record<string, string> = {
     abstractText: context.abstractText,
     contextSource: context.contextSource || "item",
-    contextSourceLabel: context.contextSourceLabel || "Item Context",
+    contextSourceLabel: context.contextSourceLabel || "条目上下文",
     currentText: context.previewText,
     notesText: context.notesText,
     pdfSelectionText: context.pdfSelectionText || "",

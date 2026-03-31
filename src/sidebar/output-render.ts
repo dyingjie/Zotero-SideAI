@@ -130,6 +130,25 @@ export function escapeHtml(text: string): string {
     .replace(/>/g, "&gt;");
 }
 
+function renderInlineMarkdown(text: string): string {
+  let html = escapeHtml(text);
+
+  html = html.replace(
+    /`([^`]+)`/g,
+    '<code class="sideai-output-inline-code">$1</code>'
+  );
+  html = html.replace(
+    /\*\*([^*]+)\*\*/g,
+    "<strong>$1</strong>"
+  );
+  html = html.replace(
+    /(^|[^*])\*([^*\n]+)\*(?!\*)/g,
+    "$1<em>$2</em>"
+  );
+
+  return html;
+}
+
 function normalizeLanguage(language: string): string {
   const normalized = language.trim().toLowerCase();
   return LANGUAGE_ALIASES[normalized] || normalized;
@@ -254,6 +273,47 @@ export function parseMarkdownBlocks(markdown: string): OutputBlock[] {
   return blocks;
 }
 
+function renderParagraphBlock(text: string): string {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  const headingMatch = trimmed.match(/^(#{1,6})\s+(.+)$/);
+  if (headingMatch) {
+    const level = Math.min(6, headingMatch[1].length);
+    return `<h${level} class="sideai-output-heading sideai-output-heading-${level}">${renderInlineMarkdown(
+      headingMatch[2]
+    )}</h${level}>`;
+  }
+
+  const lines = trimmed.split("\n").map((line) => line.trim()).filter(Boolean);
+  if (
+    lines.length > 0 &&
+    lines.every((line) => /^([-*+])\s+/.test(line))
+  ) {
+    return `<ul class="sideai-output-list">${lines
+      .map((line) => line.replace(/^[-*+]\s+/, ""))
+      .map((line) => `<li>${renderInlineMarkdown(line)}</li>`)
+      .join("")}</ul>`;
+  }
+
+  if (
+    lines.length > 0 &&
+    lines.every((line) => /^\d+\.\s+/.test(line))
+  ) {
+    return `<ol class="sideai-output-list">${lines
+      .map((line) => line.replace(/^\d+\.\s+/, ""))
+      .map((line) => `<li>${renderInlineMarkdown(line)}</li>`)
+      .join("")}</ol>`;
+  }
+
+  return `<p class="sideai-output-paragraph">${trimmed
+    .split("\n")
+    .map((line) => renderInlineMarkdown(line))
+    .join("<br />")}</p>`;
+}
+
 export function renderMarkdownPreviewHtml(markdown: string): string {
   return parseMarkdownBlocks(markdown)
     .map((block) => {
@@ -271,7 +331,7 @@ export function renderMarkdownPreviewHtml(markdown: string): string {
         return `<pre class="sideai-output-code">${languageBadge}<code${languageLabel}>${highlightCode(normalizedLanguage, block.text)}</code></pre>`;
       }
 
-      return `<p class="sideai-output-paragraph">${escapeHtml(block.text).replace(/\n/g, "<br />")}</p>`;
+      return renderParagraphBlock(block.text);
     })
     .join("");
 }

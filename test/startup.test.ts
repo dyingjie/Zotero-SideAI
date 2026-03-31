@@ -276,15 +276,15 @@ describe("startup", function () {
   it("should build config feedback messages for save failures", function () {
     assert.strictEqual(
       getConfigFailureMessage("save"),
-      "Unable to save settings right now."
+      "当前无法保存设置。"
     );
     assert.strictEqual(
       getConfigFailureMessage("save", new Error("Disk write failed.")),
-      "Unable to save settings right now. Disk write failed."
+      "当前无法保存设置。 Disk write failed."
     );
     assert.strictEqual(
       getConfigSuccessMessage("save"),
-      "API Key, Base URL, model, and fixed prompt are saved locally."
+      "API Key、Base URL、模型和固定提示词已保存到本地。"
     );
   });
 
@@ -296,11 +296,11 @@ describe("startup", function () {
         model: "",
         systemPrompt: "prompt"
       }),
-      ["Base URL", "Model", "API Key"]
+      ["Base URL", "模型", "API Key"]
     );
     assert.strictEqual(
-      getMissingConfigMessage(["Base URL", "Model", "API Key"]),
-      "Please complete required settings before sending: Base URL, Model, API Key."
+      getMissingConfigMessage(["Base URL", "模型", "API Key"]),
+      "发送前请先补全这些必填设置：Base URL、模型、API Key。"
     );
   });
 
@@ -322,7 +322,7 @@ describe("startup", function () {
       buildPreviewTextFromContext({
         abstractText: "",
         notesText: "",
-        title: "Untitled item"
+        title: "未命名条目"
       }),
       ""
     );
@@ -333,7 +333,7 @@ describe("startup", function () {
         notesText: "Only note text",
         title: "Paper title"
       }),
-      ["Title:", "Paper title", "", "Notes:", "Only note text"].join("\n")
+      ["标题：", "Paper title", "", "笔记：", "Only note text"].join("\n")
     );
 
     assert.strictEqual(mergeNotePreviewTexts(["", "   ", "<p></p>"]), "");
@@ -348,16 +348,16 @@ describe("startup", function () {
         title: "Paper title"
       }),
       [
-        "PDF Selection:",
+        "PDF 选中文本：",
         "Selected sentence",
         "",
-        "Title:",
+        "标题：",
         "Paper title",
         "",
-        "Abstract:",
+        "摘要：",
         "Abstract body",
         "",
-        "Notes:",
+        "笔记：",
         "Note body"
       ].join("\n")
     );
@@ -372,13 +372,13 @@ describe("startup", function () {
         title: "Paper title"
       }),
       [
-        "Title:",
+        "标题：",
         "Paper title",
         "",
-        "Abstract:",
+        "摘要：",
         "Abstract body",
         "",
-        "Notes:",
+        "笔记：",
         "Note body"
       ].join("\n")
     );
@@ -400,7 +400,7 @@ describe("startup", function () {
     });
 
     assert.strictEqual(result.source, "pdf-reader");
-    assert.strictEqual(result.sourceLabel, "PDF Context");
+    assert.strictEqual(result.sourceLabel, "PDF 上下文");
     assert.strictEqual(result.item, parentItem);
     assert.strictEqual(result.parentItem, parentItem);
     assert.strictEqual(result.pdfAttachmentItem, pdfAttachment);
@@ -416,7 +416,7 @@ describe("startup", function () {
     });
 
     assert.strictEqual(result.source, "item");
-    assert.strictEqual(result.sourceLabel, "Item Context");
+    assert.strictEqual(result.sourceLabel, "条目上下文");
     assert.strictEqual(result.item, regularItem);
     assert.isUndefined(result.parentItem);
     assert.isUndefined(result.pdfAttachmentItem);
@@ -447,16 +447,16 @@ describe("startup", function () {
     });
 
     assert.strictEqual(libraryContext.source, "item");
-    assert.strictEqual(libraryContext.sourceLabel, "Item Context");
+    assert.strictEqual(libraryContext.sourceLabel, "条目上下文");
     assert.strictEqual(libraryContext.item, parentItem);
 
     assert.strictEqual(pdfContext.source, "pdf-reader");
-    assert.strictEqual(pdfContext.sourceLabel, "PDF Context");
+    assert.strictEqual(pdfContext.sourceLabel, "PDF 上下文");
     assert.strictEqual(pdfContext.item, parentItem);
     assert.strictEqual(pdfContext.pdfAttachmentItem, pdfAttachment);
 
     assert.strictEqual(backToLibraryContext.source, "item");
-    assert.strictEqual(backToLibraryContext.sourceLabel, "Item Context");
+    assert.strictEqual(backToLibraryContext.sourceLabel, "条目上下文");
     assert.strictEqual(backToLibraryContext.item, parentItem);
   });
 
@@ -475,7 +475,7 @@ describe("startup", function () {
     assert.strictEqual(result.source, "pdf-reader");
     assert.strictEqual(result.item, pdfAttachment);
     assert.deepEqual(result.warnings, [
-      "PDF reader item is not linked to a parent library item."
+      "当前 PDF 附件没有关联到上级文献条目。"
     ]);
   });
 
@@ -559,13 +559,13 @@ describe("startup", function () {
         title: "Paper title"
       }),
       [
-        "Title:",
+        "标题：",
         "Paper title",
         "",
-        "Abstract:",
+        "摘要：",
         "Abstract text",
         "",
-        "Notes:",
+        "笔记：",
         "Note one",
         "",
         "Note two"
@@ -587,7 +587,7 @@ describe("startup", function () {
     });
 
     assert.strictEqual(previewText.length, MAX_CONTEXT_PREVIEW_LENGTH);
-    assert.strictEqual(previewText.includes("Title:\nPaper title"), true);
+    assert.strictEqual(previewText.includes("标题：\nPaper title"), true);
     assert.strictEqual(previewText.endsWith(TRUNCATED_PREVIEW_SUFFIX), true);
   });
 
@@ -600,7 +600,7 @@ describe("startup", function () {
     });
 
     assert.strictEqual(previewText.length, MAX_CONTEXT_PREVIEW_LENGTH);
-    assert.strictEqual(previewText.includes("PDF Selection:\n"), true);
+    assert.strictEqual(previewText.includes("PDF 选中文本：\n"), true);
     assert.strictEqual(previewText.endsWith(TRUNCATED_PREVIEW_SUFFIX), true);
   });
 
@@ -633,12 +633,12 @@ describe("startup", function () {
   it("should place current text into user message", function () {
     assert.deepEqual(
       createUserContextMessage({
-        currentText: "Title:\nPaper\n\nAbstract:\nSummary",
-        taskInstruction: "Please analyze the following paper."
+        currentText: "标题：\nPaper\n\n摘要：\nSummary",
+        taskInstruction: "请分析以下文献内容。"
       }),
       {
         content:
-          "Please analyze the following paper.\n\nTitle:\nPaper\n\nAbstract:\nSummary",
+          "请分析以下文献内容。\n\n标题：\nPaper\n\n摘要：\nSummary",
         role: "user"
       }
     );
@@ -646,11 +646,11 @@ describe("startup", function () {
 
   it("should truncate overly long active composer messages before building user message", function () {
     const message = createUserContextMessage({
-      currentText: "Title:\nPaper",
+      currentText: "标题：\nPaper",
       taskInstruction: "Q".repeat(MAX_TASK_INSTRUCTION_LENGTH + 120)
     });
 
-    assert.strictEqual(message.content.includes("Title:\nPaper"), true);
+    assert.strictEqual(message.content.includes("标题：\nPaper"), true);
     assert.strictEqual(message.content.includes(TRUNCATED_PREVIEW_SUFFIX), true);
     assert.strictEqual(
       message.content.startsWith("Q".repeat(MAX_TASK_INSTRUCTION_LENGTH - TRUNCATED_PREVIEW_SUFFIX.length - 1)),
@@ -662,16 +662,16 @@ describe("startup", function () {
     assert.strictEqual(
       renderPromptTemplate(
         [
-          "Title: {{title}}",
-          "Abstract: {{ abstractText }}",
-          "Notes: {{notesText}}",
-          "Current: {{currentText}}",
-          "Unknown: {{missing}}"
+          "标题：{{title}}",
+          "摘要：{{ abstractText }}",
+          "笔记：{{notesText}}",
+          "当前内容：{{currentText}}",
+          "未知变量：{{missing}}"
         ].join("\n"),
         {
           abstractText: "Abstract body",
           contextSource: "pdf-reader",
-          contextSourceLabel: "PDF Context",
+          contextSourceLabel: "PDF 上下文",
           notesText: "Note body",
           pdfSelectionText: "Selected sentence",
           previewText: "Unified preview",
@@ -679,38 +679,38 @@ describe("startup", function () {
         }
       ),
       [
-        "Title: Paper title",
-        "Abstract: Abstract body",
-        "Notes: Note body",
-        "Current: Unified preview",
-        "Unknown: {{missing}}"
+        "标题：Paper title",
+        "摘要：Abstract body",
+        "笔记：Note body",
+        "当前内容：Unified preview",
+        "未知变量：{{missing}}"
       ].join("\n")
     );
 
     assert.strictEqual(
-      renderPromptTemplate("Selection: {{pdfSelectionText}}", {
+      renderPromptTemplate("选区：{{pdfSelectionText}}", {
         abstractText: "Abstract body",
         contextSource: "pdf-reader",
-        contextSourceLabel: "PDF Context",
+        contextSourceLabel: "PDF 上下文",
         notesText: "Note body",
         pdfSelectionText: "Selected sentence",
         previewText: "Unified preview",
         title: "Paper title"
       }),
-      "Selection: Selected sentence"
+      "选区：Selected sentence"
     );
 
     assert.strictEqual(
-      renderPromptTemplate("Source: {{contextSourceLabel}}", {
+      renderPromptTemplate("来源：{{contextSourceLabel}}", {
         abstractText: "Abstract body",
         contextSource: "pdf-reader",
-        contextSourceLabel: "PDF Context",
+        contextSourceLabel: "PDF 上下文",
         notesText: "Note body",
         pdfSelectionText: "Selected sentence",
         previewText: "Unified preview",
         title: "Paper title"
       }),
-      "Source: PDF Context"
+      "来源：PDF 上下文"
     );
   });
 
@@ -719,11 +719,11 @@ describe("startup", function () {
       context: {
         abstractText: "Abstract body",
         contextSource: "pdf-reader",
-        contextSourceLabel: "PDF Context",
+        contextSourceLabel: "PDF 上下文",
         notesText: "Note body",
         pdfSelectionText: "Selected sentence",
         previewText:
-          "PDF Selection:\nSelected sentence\n\nTitle:\nPaper title\n\nAbstract:\nAbstract body",
+          "PDF 选中文本：\nSelected sentence\n\n标题：\nPaper title\n\n摘要：\nAbstract body",
         title: "Paper title"
       },
       systemPromptTemplate: "Summarize {{title}} with {{abstractText}}."
@@ -736,7 +736,7 @@ describe("startup", function () {
       },
       {
         content:
-          "Please analyze the following paper.\n\nPDF Selection:\nSelected sentence\n\nTitle:\nPaper title\n\nAbstract:\nAbstract body",
+          "请分析以下文献内容。\n\nPDF 选中文本：\nSelected sentence\n\n标题：\nPaper title\n\n摘要：\nAbstract body",
         role: "user"
       }
     ]);
@@ -748,15 +748,15 @@ describe("startup", function () {
         "Summarize Paper title with Abstract body.",
         "",
         "USER:",
-        "Please analyze the following paper.",
+        "请分析以下文献内容。",
         "",
-        "PDF Selection:",
+        "PDF 选中文本：",
         "Selected sentence",
         "",
-        "Title:",
+        "标题：",
         "Paper title",
         "",
-        "Abstract:",
+        "摘要：",
         "Abstract body"
       ].join("\n")
     );
@@ -765,30 +765,30 @@ describe("startup", function () {
       formatPreviewMessages(messages, {
         abstractText: "Abstract body",
         contextSource: "pdf-reader",
-        contextSourceLabel: "PDF Context",
+        contextSourceLabel: "PDF 上下文",
         notesText: "Note body",
         pdfSelectionText: "Selected sentence",
         previewText:
-          "PDF Selection:\nSelected sentence\n\nTitle:\nPaper title\n\nAbstract:\nAbstract body",
+          "PDF 选中文本：\nSelected sentence\n\n标题：\nPaper title\n\n摘要：\nAbstract body",
         title: "Paper title"
       }),
       [
-        "Context Source:",
-        "PDF Context",
+        "上下文来源：",
+        "PDF 上下文",
         "",
         "SYSTEM:",
         "Summarize Paper title with Abstract body.",
         "",
         "USER:",
-        "Please analyze the following paper.",
+        "请分析以下文献内容。",
         "",
-        "PDF Selection:",
+        "PDF 选中文本：",
         "Selected sentence",
         "",
-        "Title:",
+        "标题：",
         "Paper title",
         "",
-        "Abstract:",
+        "摘要：",
         "Abstract body"
       ].join("\n")
     );
@@ -799,10 +799,10 @@ describe("startup", function () {
       context: {
         abstractText: "Abstract body",
         contextSource: "pdf-reader",
-        contextSourceLabel: "PDF Context",
+        contextSourceLabel: "PDF 上下文",
         notesText: "Note body",
         pdfSelectionText: "Selected sentence",
-        previewText: "PDF Selection:\nSelected sentence\n\nTitle:\nPaper title",
+        previewText: "PDF 选中文本：\nSelected sentence\n\n标题：\nPaper title",
         title: "Paper title"
       },
       systemPromptTemplate: "Summarize {{title}}.",
@@ -811,7 +811,7 @@ describe("startup", function () {
 
     assert.strictEqual(
       messages[1].content,
-      "Answer in Chinese and focus on methods.\n\nPDF Selection:\nSelected sentence\n\nTitle:\nPaper title"
+      "Answer in Chinese and focus on methods.\n\nPDF 选中文本：\nSelected sentence\n\n标题：\nPaper title"
     );
   });
 
@@ -819,9 +819,9 @@ describe("startup", function () {
     const context = {
       abstractText: "Abstract body",
       contextSource: "item" as const,
-      contextSourceLabel: "Item Context",
+      contextSourceLabel: "条目上下文",
       notesText: "Note body",
-      previewText: "Title:\nPaper title\n\nAbstract:\nAbstract body",
+      previewText: "标题：\nPaper title\n\n摘要：\nAbstract body",
       title: "Paper title"
     };
 
@@ -944,7 +944,7 @@ describe("startup", function () {
     assert.instanceOf(thrownError, AIRequestError);
     assert.strictEqual(
       (thrownError as AIRequestError).message,
-      "Request failed with status 401."
+      "请求失败，状态码 401。"
     );
     assert.strictEqual((thrownError as AIRequestError).status, 401);
   });
@@ -1056,7 +1056,7 @@ describe("startup", function () {
     assert.instanceOf(thrownError, AIRequestError);
     assert.strictEqual(
       (thrownError as AIRequestError).message,
-      "Request timed out."
+      "请求超时。"
     );
   });
 
@@ -1067,7 +1067,7 @@ describe("startup", function () {
       })
     );
     assert.instanceOf(timeoutError, AIRequestError);
-    assert.strictEqual(timeoutError.message, "Request timed out.");
+    assert.strictEqual(timeoutError.message, "请求超时。");
 
     const networkError = normalizeAIRequestError(new Error("Network down."));
     assert.strictEqual(networkError.message, "Network down.");
@@ -1087,7 +1087,7 @@ describe("startup", function () {
     assert.instanceOf(thrownError, AIRequestError);
     assert.strictEqual(
       (thrownError as AIRequestError).message,
-      "Request failed with status 503."
+      "请求失败，状态码 503。"
     );
     assert.strictEqual((thrownError as AIRequestError).status, 503);
   });
@@ -1116,7 +1116,7 @@ describe("startup", function () {
     assert.instanceOf(thrownError, AIRequestError);
     assert.strictEqual(
       (thrownError as AIRequestError).message,
-      "Response format is incompatible."
+      "响应格式不兼容。"
     );
   });
 
@@ -1160,11 +1160,11 @@ describe("startup", function () {
 
   it("should support clearing current session output", function () {
     const getClearedOutputPlaceholder = () =>
-      "AI response output will appear in this area after sending a request.";
+      "发送请求后，AI 回复会显示在这里。";
 
     assert.strictEqual(
       getClearedOutputPlaceholder(),
-      "AI response output will appear in this area after sending a request."
+      "发送请求后，AI 回复会显示在这里。"
     );
   });
 
@@ -1219,6 +1219,30 @@ describe("startup", function () {
     );
   });
 
+  it("should render common markdown syntax in assistant replies", function () {
+    assert.strictEqual(
+      renderMarkdownPreviewHtml(
+        [
+          "## 标题",
+          "",
+          "**重点** 与 *说明* 还有 `code`",
+          "",
+          "- 第一项",
+          "- 第二项",
+          "",
+          "1. 步骤一",
+          "2. 步骤二"
+        ].join("\n")
+      ),
+      [
+        '<h2 class="sideai-output-heading sideai-output-heading-2">标题</h2>',
+        '<p class="sideai-output-paragraph"><strong>重点</strong> 与 <em>说明</em> 还有 <code class="sideai-output-inline-code">code</code></p>',
+        '<ul class="sideai-output-list"><li>第一项</li><li>第二项</li></ul>',
+        '<ol class="sideai-output-list"><li>步骤一</li><li>步骤二</li></ol>'
+      ].join("")
+    );
+  });
+
   it("should highlight common code tokens in fenced blocks", function () {
     assert.strictEqual(
       highlightCode(
@@ -1241,7 +1265,7 @@ describe("startup", function () {
 
   it("should build capped session history entries", function () {
     assert.strictEqual(buildHistorySummary(" \n  first line   second line "), "first line second line");
-    assert.strictEqual(buildHistorySummary(""), "Empty response");
+    assert.strictEqual(buildHistorySummary(""), "空响应");
 
     const entry = buildHistoryEntry({
       content: "Result body",
@@ -1406,7 +1430,7 @@ describe("startup", function () {
       role: "user"
     });
     const loadingMessage = buildChatMessageEntry({
-      content: "Requesting model response...",
+      content: "正在请求模型回复...",
       mode: "text",
       role: "status",
       tone: "loading"
@@ -1500,7 +1524,7 @@ describe("startup", function () {
       { role: "user", content: "Question body" }
     ] as const;
     const errorMessage = buildChatMessageEntry({
-      content: "Request failed.\n\nNetwork down.",
+      content: "请求失败。\n\nNetwork down.",
       mode: "text",
       role: "status",
       retryMessages: [...retryMessages],
@@ -1519,13 +1543,13 @@ describe("startup", function () {
       { role: "user", content: "Question body" }
     ];
     const loadingMessage = buildChatMessageEntry({
-      content: "Requesting model response...",
+      content: "正在请求模型回复...",
       mode: "text",
       role: "status",
       tone: "loading"
     });
     const failedMessage = buildChatMessageEntry({
-      content: "Request failed.\n\nRequest timed out.",
+      content: "请求失败。\n\n请求超时。",
       mode: "text",
       role: "status",
       retryMessages,

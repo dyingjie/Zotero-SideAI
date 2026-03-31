@@ -13,7 +13,7 @@ export const MAX_HISTORY_ITEMS = 6;
 export function buildHistorySummary(content: string): string {
   const normalized = content.replace(/\s+/g, " ").trim();
   if (!normalized) {
-    return "Empty response";
+    return "空响应";
   }
 
   return normalized.length > 72

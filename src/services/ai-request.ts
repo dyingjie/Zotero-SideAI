@@ -141,14 +141,14 @@ export function normalizeAIRequestError(error: unknown): AIRequestError {
   }
 
   if (error instanceof Error && error.name === "AbortError") {
-    return new AIRequestError("Request timed out.");
+    return new AIRequestError("请求超时。");
   }
 
   if (error instanceof Error && error.message.trim()) {
     return new AIRequestError(error.message.trim());
   }
 
-  return new AIRequestError("Request failed.");
+  return new AIRequestError("请求失败。");
 }
 
 export function ensureSuccessfulResponse(response: Response): Response {
@@ -156,7 +156,7 @@ export function ensureSuccessfulResponse(response: Response): Response {
     return response;
   }
 
-  throw new AIRequestError(`Request failed with status ${response.status}.`, {
+  throw new AIRequestError(`请求失败，状态码 ${response.status}。`, {
     status: response.status
   });
 }
@@ -169,14 +169,14 @@ export function parseChatCompletionsResponse(data: unknown): string {
     !Array.isArray(data.choices) ||
     data.choices.length === 0
   ) {
-    throw new AIRequestError("Response format is incompatible.");
+    throw new AIRequestError("响应格式不兼容。");
   }
 
   const firstChoice = data.choices[0];
   const content = firstChoice?.message?.content;
 
   if (typeof content !== "string" || !content.trim()) {
-    throw new AIRequestError("Response format is incompatible.");
+    throw new AIRequestError("响应格式不兼容。");
   }
 
   return content;

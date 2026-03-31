@@ -2,7 +2,7 @@ import { config } from "../../package.json";
 
 const SYSTEM_PROMPT_PREF = "systemPrompt";
 const DEFAULT_SYSTEM_PROMPT =
-  "You are an academic reading assistant. Summarize the selected paper content clearly and faithfully.";
+  "你是一名学术阅读助手。请清晰、忠实地总结当前选中的文献内容。";
 
 function getSystemPromptPrefKey(): string {
   return `${config.prefsPrefix}.${SYSTEM_PROMPT_PREF}`;

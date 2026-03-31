@@ -26,7 +26,7 @@ export function resolvePaneContext(options: {
   if (!currentItem) {
     return {
       source: "item",
-      sourceLabel: "Item Context",
+      sourceLabel: "条目上下文",
       warnings: []
     };
   }
@@ -39,7 +39,7 @@ export function resolvePaneContext(options: {
   if (!isPDFReader) {
     return {
       source: "item",
-      sourceLabel: "Item Context",
+      sourceLabel: "条目上下文",
       item: currentItem,
       warnings: []
     };
@@ -54,12 +54,12 @@ export function resolvePaneContext(options: {
 
   const warnings: string[] = [];
   if (!parentItem) {
-    warnings.push("PDF reader item is not linked to a parent library item.");
+    warnings.push("当前 PDF 附件没有关联到上级文献条目。");
   }
 
   return {
     source: "pdf-reader",
-    sourceLabel: "PDF Context",
+    sourceLabel: "PDF 上下文",
     item: parentItem || currentItem,
     parentItem,
     pdfAttachmentItem: currentItem,

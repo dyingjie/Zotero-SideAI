@@ -1,10 +1,9 @@
-import { getSavedApiKey, saveApiKey } from "../settings/api-key";
+import { getSavedApiKey } from "../settings/api-key";
 import {
   getDefaultBaseUrl,
-  getSavedBaseUrl,
-  saveBaseUrl
+  getSavedBaseUrl
 } from "../settings/base-url";
-import { getDefaultModel, getSavedModel, saveModel } from "../settings/model";
+import { getDefaultModel, getSavedModel } from "../settings/model";
 import {
   addPromptPreset,
   deletePromptPreset,
@@ -18,18 +17,10 @@ import {
 } from "../settings/prompt-presets";
 import {
   getDefaultSystemPrompt,
-  getSavedSystemPrompt,
-  saveSystemPrompt
+  getSavedSystemPrompt
 } from "../settings/system-prompt";
-import {
-  resetPromptPresetsToDefaults,
-  resetSettingsToDefaults
-} from "../settings/reset";
-import {
-  type ConfigFeedbackTone,
-  getConfigFailureMessage,
-  getConfigSuccessMessage
-} from "./config-feedback";
+import { resetPromptPresetsToDefaults } from "../settings/reset";
+import { type ConfigFeedbackTone } from "./config-feedback";
 import {
   getMissingConfigFields,
   getMissingConfigMessage
@@ -81,7 +72,7 @@ import { getReaderSelectionText } from "./pdf-selection";
 
 const SIDEBAR_PANE_ID = "sideai-panel";
 const OUTPUT_PLACEHOLDER =
-  "AI response output will appear in this area after sending a request.";
+  "发送请求后，AI 回复会显示在这里。";
 
 let registeredPaneKey: false | string = false;
 const paneContextStore = new WeakMap<HTMLDivElement, CurrentTextContext>();
@@ -171,6 +162,15 @@ function applyPaneLayout(body: HTMLDivElement): void {
   const cards = body.querySelectorAll(".sideai-pane-card");
   const mutedBlocks = body.querySelectorAll(".sideai-pane-muted");
   const sections = body.querySelectorAll(".sideai-pane-section");
+  const chatSection = body.querySelector(
+    "[data-sideai-section='chat']"
+  ) as HTMLDivElement | null;
+  const chatCard = body.querySelector(
+    "[data-sideai-section='chat'] .sideai-pane-card"
+  ) as HTMLDivElement | null;
+  const composerSection = body.querySelector(
+    "[data-sideai-section='composer']"
+  ) as HTMLDivElement | null;
   const actions = body.querySelector(".sideai-pane-actions") as HTMLDivElement | null;
   const buttons = body.querySelectorAll("button");
   const state = body.querySelector(".sideai-pane-state") as HTMLDivElement | null;
@@ -192,6 +192,8 @@ function applyPaneLayout(body: HTMLDivElement): void {
     root.style.flexDirection = "column";
     root.style.gap = layoutProfile.rootGap;
     root.style.width = "100%";
+    root.style.height = "100%";
+    root.style.minHeight = "100%";
     root.style.boxSizing = "border-box";
     root.style.overflowX = "hidden";
     root.style.padding = "2px 0";
@@ -219,6 +221,22 @@ function applyPaneLayout(body: HTMLDivElement): void {
     element.style.gap = "4px";
     element.style.minWidth = "0";
   });
+
+  if (chatSection) {
+    chatSection.style.flex = "1 1 auto";
+    chatSection.style.minHeight = "260px";
+  }
+
+  if (chatCard) {
+    chatCard.style.display = "flex";
+    chatCard.style.flexDirection = "column";
+    chatCard.style.flex = "1 1 auto";
+    chatCard.style.minHeight = "220px";
+  }
+
+  if (composerSection) {
+    composerSection.style.flex = "0 0 auto";
+  }
 
   cards.forEach((card: Element) => {
     const element = card as HTMLDivElement;
@@ -250,6 +268,9 @@ function applyPaneLayout(body: HTMLDivElement): void {
     "[data-sideai-role='request-preview']"
   ) as HTMLDivElement | null;
   const outputParagraphs = body.querySelectorAll(".sideai-output-paragraph");
+  const outputHeadings = body.querySelectorAll(".sideai-output-heading");
+  const outputLists = body.querySelectorAll(".sideai-output-list");
+  const outputInlineCodes = body.querySelectorAll(".sideai-output-inline-code");
   const outputCodeBlocks = body.querySelectorAll(".sideai-output-code");
   const outputCodeHeaders = body.querySelectorAll(".sideai-output-code-header");
   const outputCodeElements = body.querySelectorAll(".sideai-output-code code");
@@ -277,17 +298,21 @@ function applyPaneLayout(body: HTMLDivElement): void {
   }
 
   if (outputPreview) {
-    outputPreview.style.minHeight = "84px";
-    outputPreview.style.maxHeight = layoutProfile.outputMaxHeight;
+    outputPreview.style.flex = "1 1 auto";
+    outputPreview.style.minHeight = "220px";
+    outputPreview.style.maxHeight = "none";
     outputPreview.style.overflowY = "auto";
     outputPreview.style.overflowWrap = "anywhere";
     outputPreview.style.lineHeight = "1.5";
+    outputPreview.style.padding = "2px";
+    outputPreview.style.marginTop = "4px";
   }
 
   if (chatStream) {
     chatStream.style.display = "flex";
     chatStream.style.flexDirection = "column";
-    chatStream.style.gap = "8px";
+    chatStream.style.gap = "18px";
+    chatStream.style.paddingBottom = "10px";
   }
 
   chatMessages.forEach((message: Element) => {
@@ -296,26 +321,36 @@ function applyPaneLayout(body: HTMLDivElement): void {
     const tone = element.dataset.sideaiTone || "default";
     element.style.display = "flex";
     element.style.flexDirection = "column";
-    element.style.gap = "4px";
-    element.style.padding = "8px";
-    element.style.borderRadius = "8px";
+    element.style.gap = "6px";
+    element.style.padding = "10px 12px";
+    element.style.borderRadius = "14px";
     element.style.border = "1px solid var(--fill-tertiary, rgba(0,0,0,0.08))";
+    element.style.maxWidth = role === "status" ? "100%" : "92%";
+    element.style.alignSelf =
+      role === "user"
+        ? "flex-end"
+        : role === "status"
+          ? "center"
+          : "flex-start";
+    element.style.boxShadow = "0 1px 3px rgba(0,0,0,0.05)";
+    element.style.marginTop = "2px";
+    element.style.marginBottom = "2px";
     element.style.background =
       role === "user"
-        ? "rgba(32, 98, 180, 0.08)"
+        ? "rgba(32, 98, 180, 0.12)"
         : tone === "error"
           ? "rgba(208, 64, 64, 0.08)"
           : tone === "loading"
             ? "rgba(180, 120, 32, 0.08)"
-            : "var(--fill-quinary, rgba(0,0,0,0.05))";
+            : "rgba(255,255,255,0.72)";
   });
 
   chatRoles.forEach((roleLabel: Element) => {
     const element = roleLabel as HTMLDivElement;
     element.style.fontSize = "11px";
     element.style.fontWeight = "600";
-    element.style.textTransform = "uppercase";
-    element.style.letterSpacing = "0.04em";
+    element.style.textTransform = "none";
+    element.style.letterSpacing = "0.02em";
     element.style.color = "var(--text-color-deemphasized, #666)";
   });
 
@@ -327,8 +362,31 @@ function applyPaneLayout(body: HTMLDivElement): void {
 
   outputParagraphs.forEach((paragraph: Element) => {
     const element = paragraph as HTMLParagraphElement;
-    element.style.margin = "0 0 10px";
+    element.style.margin = "0 0 14px";
     element.style.whiteSpace = "normal";
+  });
+
+  outputHeadings.forEach((heading: Element) => {
+    const element = heading as HTMLElement;
+    element.style.margin = "0 0 12px";
+    element.style.fontWeight = "700";
+    element.style.lineHeight = "1.35";
+  });
+
+  outputLists.forEach((list: Element) => {
+    const element = list as HTMLOListElement | HTMLUListElement;
+    element.style.margin = "0 0 14px 20px";
+    element.style.padding = "0";
+    element.style.lineHeight = "1.5";
+  });
+
+  outputInlineCodes.forEach((inlineCode: Element) => {
+    const element = inlineCode as HTMLElement;
+    element.style.padding = "1px 4px";
+    element.style.borderRadius = "4px";
+    element.style.background = "var(--fill-tertiary, rgba(0,0,0,0.08))";
+    element.style.fontFamily = "monospace";
+    element.style.fontSize = "11px";
   });
 
   outputCodeBlocks.forEach((codeBlock: Element) => {
@@ -390,7 +448,7 @@ function applyPaneLayout(body: HTMLDivElement): void {
   });
 
   if (requestPreview) {
-    requestPreview.style.minHeight = "84px";
+    requestPreview.style.minHeight = "64px";
     requestPreview.style.maxHeight = layoutProfile.requestMaxHeight;
     requestPreview.style.overflowY = "auto";
     requestPreview.style.whiteSpace = "pre-wrap";
@@ -446,11 +504,11 @@ function applyPaneLayout(body: HTMLDivElement): void {
     outputBadge.style.width = "fit-content";
     outputBadge.style.maxWidth = "100%";
     outputBadge.style.padding = "2px 8px";
-    outputBadge.style.marginBottom = "6px";
+    outputBadge.style.marginBottom = "8px";
     outputBadge.style.borderRadius = "999px";
     outputBadge.style.fontSize = "11px";
     outputBadge.style.fontWeight = "600";
-    outputBadge.style.background = "var(--fill-tertiary, rgba(0,0,0,0.08))";
+    outputBadge.style.background = "rgba(32, 98, 180, 0.08)";
   }
 
   if (configFeedback) {
@@ -540,13 +598,13 @@ function applyPaneLayout(body: HTMLDivElement): void {
 
 function getItemTitle(item?: Zotero.Item): string {
   if (!item) {
-    return "No item selected";
+    return "未选择条目";
   }
 
   const title = item.getField("title");
   return typeof title === "string" && title.trim()
     ? title.trim()
-    : "Untitled item";
+    : "未命名条目";
 }
 
 function buildCurrentTextContext(item?: Zotero.Item): CurrentTextContext {
@@ -554,12 +612,12 @@ function buildCurrentTextContext(item?: Zotero.Item): CurrentTextContext {
     return {
       abstractText: "",
       contextSource: "item",
-      contextSourceLabel: "Item Context",
+      contextSourceLabel: "条目上下文",
       contextWarnings: [],
       notesText: "",
       pdfSelectionText: "",
-      previewText: "No current text available.",
-      title: "No item selected"
+      previewText: "当前没有可用文本。",
+      title: "未选择条目"
     };
   }
 
@@ -588,11 +646,11 @@ function buildCurrentTextContext(item?: Zotero.Item): CurrentTextContext {
   return {
     abstractText: normalizedAbstractText,
     contextSource: "item",
-    contextSourceLabel: "Item Context",
+    contextSourceLabel: "条目上下文",
     contextWarnings: [],
     notesText,
     pdfSelectionText: "",
-    previewText: previewText || "Selected item has no previewable text yet.",
+    previewText: previewText || "当前条目暂无可发送的预览文本。",
     title
   };
 }
@@ -630,23 +688,23 @@ function setPaneState(
   if (stateElement) {
     stateElement.textContent =
       state === "empty"
-        ? "No item selected."
+        ? "未选择条目。"
         : state === "loading"
-          ? "Loading..."
+          ? "加载中..."
           : state === "error"
-            ? `Error: ${message || "Unknown error"}`
-            : "Ready";
+            ? `错误：${message || "未知错误"}`
+            : "就绪";
   }
 
   if (actionStatusElement) {
     actionStatusElement.textContent =
       state === "empty"
-        ? "Select an item to begin."
+        ? "请选择一个条目开始使用。"
         : state === "loading"
-          ? "Request is loading."
+          ? "请求处理中。"
           : state === "error"
-            ? message || "Something went wrong."
-            : "Panel ready. Send action is not wired yet.";
+            ? message || "发生错误。"
+            : "面板已就绪，可以发送消息。";
   }
 
   if (sendButton) {
@@ -661,25 +719,13 @@ function setPaneState(
   if (outputBadgeElement) {
     outputBadgeElement.textContent =
       state === "loading"
-        ? "Loading"
+        ? "加载中"
         : state === "error"
-          ? "Error"
+          ? "错误"
           : state === "empty"
-            ? "Idle"
-            : "Ready";
+            ? "空闲"
+            : "就绪";
   }
-}
-
-function getApiKeyInput(body: HTMLDivElement): HTMLInputElement | null {
-  return body.querySelector("#sideai-apikey") as HTMLInputElement | null;
-}
-
-function getBaseUrlInput(body: HTMLDivElement): HTMLInputElement | null {
-  return body.querySelector("#sideai-baseurl") as HTMLInputElement | null;
-}
-
-function getModelInput(body: HTMLDivElement): HTMLInputElement | null {
-  return body.querySelector("#sideai-model") as HTMLInputElement | null;
 }
 
 function getSystemPromptInput(body: HTMLDivElement): HTMLTextAreaElement | null {
@@ -688,6 +734,31 @@ function getSystemPromptInput(body: HTMLDivElement): HTMLTextAreaElement | null 
 
 function getPromptPresetSelect(body: HTMLDivElement): HTMLSelectElement | null {
   return body.querySelector("#sideai-prompt-preset") as HTMLSelectElement | null;
+}
+
+function getCurrentPromptPresetId(body: HTMLDivElement): string {
+  const promptPresetSelect = getPromptPresetSelect(body);
+  const selectedValue = promptPresetSelect?.value;
+
+  if (typeof selectedValue === "string" && selectedValue.trim()) {
+    return selectedValue.trim();
+  }
+
+  const selectedOption =
+    (promptPresetSelect?.selectedOptions?.[0] as HTMLOptionElement | undefined) ||
+    (typeof promptPresetSelect?.selectedIndex === "number" &&
+    promptPresetSelect.selectedIndex >= 0
+      ? (promptPresetSelect.options[
+          promptPresetSelect.selectedIndex
+        ] as HTMLOptionElement | undefined)
+      : undefined);
+  const optionValue = selectedOption?.value;
+
+  if (typeof optionValue === "string" && optionValue.trim()) {
+    return optionValue.trim();
+  }
+
+  return getSelectedPromptPresetId();
 }
 
 function getPromptPresetLabelInput(
@@ -757,15 +828,15 @@ function renderChatStream(body: HTMLDivElement): void {
             <div class="sideai-chat-message" data-sideai-role="${message.role}" data-sideai-tone="${message.tone}">
               <div class="sideai-chat-role">${
                 message.role === "user"
-                  ? "User"
+                  ? "用户"
                   : message.role === "assistant"
-                    ? "Assistant"
-                    : "Status"
+                    ? "AI"
+                    : "状态"
               }</div>
               <div>${renderedContent}</div>
               ${
                 message.tone === "error" && message.retryMessages?.length
-                  ? `<button class="sideai-chat-retry" data-sideai-retry-id="${message.id}">Retry</button>`
+                  ? `<button class="sideai-chat-retry" data-sideai-retry-id="${message.id}">重试</button>`
                   : ""
               }
             </div>
@@ -835,7 +906,7 @@ function renderHistoryList(body: HTMLDivElement): void {
 
   const history = getSessionHistory(body);
   if (!history.length) {
-    historyListElement.textContent = "No session history yet.";
+    historyListElement.textContent = "暂无会话历史。";
     applyPaneLayout(body);
     return;
   }
@@ -845,10 +916,10 @@ function renderHistoryList(body: HTMLDivElement): void {
       (entry) => `
         <div class="sideai-history-item">
           <div class="sideai-history-badge" data-sideai-status="${entry.status}">
-            ${entry.status === "error" ? "Error" : "Success"}
+            ${entry.status === "error" ? "失败" : "成功"}
           </div>
           <div>${entry.summary}</div>
-          <button class="sideai-history-open" data-sideai-history-id="${entry.id}">Open</button>
+          <button class="sideai-history-open" data-sideai-history-id="${entry.id}">打开</button>
         </div>
       `
     )
@@ -868,7 +939,7 @@ function renderHistoryList(body: HTMLDivElement): void {
         }
 
         setOutputPreviewContent(body, targetEntry.content, targetEntry.mode);
-        setActionStatus(body, "Loaded a previous session result.");
+        setActionStatus(body, "已加载一条历史会话结果。");
         setPaneState(
           body,
           targetEntry.status === "error" ? "error" : "ready",
@@ -892,9 +963,9 @@ function refreshRequestPreview(body: HTMLDivElement): void {
     return;
   }
 
-  if (!currentTextContext || currentTextContext.title === "No item selected") {
+  if (!currentTextContext || currentTextContext.title === "未选择条目") {
     requestPreviewElement.textContent =
-      "Select an item to inspect the final request preview.";
+      "请选择一个条目以查看最终请求预览。";
     return;
   }
 
@@ -917,14 +988,24 @@ function renderPromptPresetOptions(body: HTMLDivElement): void {
 
   const presets = getSavedPromptPresets();
   const selectedId = getSelectedPromptPresetId();
-  presetSelect.innerHTML = presets
-    .map(
-      (preset) =>
-        `<option value="${preset.id}"${
-          preset.id === selectedId ? " selected" : ""
-        }>${preset.label}</option>`
-    )
-    .join("");
+  const optionDocument = presetSelect.ownerDocument;
+  if (!optionDocument) {
+    return;
+  }
+
+  while (presetSelect.options.length) {
+    presetSelect.remove(0);
+  }
+
+  presets.forEach((preset) => {
+    const option = optionDocument.createElement("option");
+    option.value = preset.id;
+    option.textContent = preset.label;
+    option.selected = preset.id === selectedId;
+    presetSelect.appendChild(option);
+  });
+
+  presetSelect.value = selectedId;
 }
 
 function syncPromptPresetEditor(body: HTMLDivElement): void {
@@ -948,19 +1029,28 @@ function savePromptPresetSelection(
 ): PromptPreset | null {
   savePromptPresets(presets);
   saveSelectedPromptPresetId(selectedId);
-  renderPromptPresetOptions(body);
-
-  const promptPresetSelect = getPromptPresetSelect(body);
   const selectedPreset =
     getSavedPromptPresets().find((preset) => preset.id === selectedId) ||
     getSelectedPromptPreset();
 
-  if (promptPresetSelect) {
-    promptPresetSelect.value = selectedPreset.id;
+  try {
+    renderPromptPresetOptions(body);
+
+    const promptPresetSelect = getPromptPresetSelect(body);
+    if (promptPresetSelect) {
+      promptPresetSelect.value = selectedPreset.id;
+    }
+
+    syncPromptPresetEditor(body);
+    refreshRequestPreview(body);
+  } catch (error) {
+    Zotero.logError(
+      error instanceof Error
+        ? error
+        : new Error("提示词预设已保存，但刷新界面时发生错误。")
+    );
   }
 
-  syncPromptPresetEditor(body);
-  refreshRequestPreview(body);
   return selectedPreset || null;
 }
 
@@ -973,7 +1063,7 @@ function saveSelectedPromptPreset(body: HTMLDivElement): PromptPreset | null {
     return null;
   }
 
-  const selectedId = promptPresetSelect.value;
+  const selectedId = getCurrentPromptPresetId(body);
   const nextPresets = updatePromptPreset(getSavedPromptPresets(), selectedId, {
     label: promptPresetLabelInput.value,
     prompt: systemPromptInput.value
@@ -1022,10 +1112,10 @@ function removeSelectedPromptPreset(body: HTMLDivElement): PromptPreset | null {
   if (presets.length <= 1) {
     setConfigFeedback(
       body,
-      "Keep at least one prompt preset available before deleting.",
+      "删除前至少保留一个提示词预设。",
       "error"
     );
-    setActionStatus(body, "At least one prompt preset must remain.");
+    setActionStatus(body, "至少需要保留一个提示词预设。");
     return null;
   }
 
@@ -1059,92 +1149,12 @@ function setConfigFeedback(
 }
 
 function syncSavedSettings(body: HTMLDivElement): void {
-  const baseUrlInput = getBaseUrlInput(body);
-  const modelInput = getModelInput(body);
-  const apiKeyInput = getApiKeyInput(body);
   const promptPresetSelect = getPromptPresetSelect(body);
-
-  if (baseUrlInput) {
-    baseUrlInput.value = getSavedBaseUrl();
-  }
-
-  if (modelInput) {
-    modelInput.value = getSavedModel();
-  }
-
-  if (!apiKeyInput) {
-    renderPromptPresetOptions(body);
-    if (promptPresetSelect) {
-      promptPresetSelect.value = getSelectedPromptPreset().id;
-    }
-    syncPromptPresetEditor(body);
-    return;
-  }
-
-  apiKeyInput.value = getSavedApiKey();
   renderPromptPresetOptions(body);
   if (promptPresetSelect) {
     promptPresetSelect.value = getSelectedPromptPreset().id;
   }
   syncPromptPresetEditor(body);
-}
-
-function persistSettings(body: HTMLDivElement): void {
-  const baseUrlInput = getBaseUrlInput(body);
-  const modelInput = getModelInput(body);
-  const systemPromptInput = getSystemPromptInput(body);
-  const apiKeyInput = getApiKeyInput(body);
-  const promptPresetSelect = getPromptPresetSelect(body);
-
-  if (
-    !baseUrlInput ||
-    !modelInput ||
-    !systemPromptInput ||
-    !apiKeyInput ||
-    !promptPresetSelect
-  ) {
-    return;
-  }
-
-  try {
-    const savedPreset = saveSelectedPromptPreset(body);
-
-    saveBaseUrl(baseUrlInput.value);
-    saveModel(modelInput.value);
-    saveSystemPrompt(savedPreset?.prompt || systemPromptInput.value);
-    saveApiKey(apiKeyInput.value);
-    const message = getConfigSuccessMessage("save");
-    setConfigFeedback(body, message, "success");
-    setActionStatus(body, message);
-  } catch (error) {
-    Zotero.logError(
-      error instanceof Error
-        ? error
-        : new Error("Unable to save plugin settings.")
-    );
-    const message = getConfigFailureMessage("save", error);
-    setConfigFeedback(body, message, "error");
-    setActionStatus(body, message);
-  }
-}
-
-function restoreDefaultSettings(body: HTMLDivElement): void {
-  try {
-    resetSettingsToDefaults();
-    syncSavedSettings(body);
-    const message = getConfigSuccessMessage("restore");
-    setConfigFeedback(body, message, "success");
-    setActionStatus(body, message);
-  } catch (error) {
-    Zotero.logError(
-      error instanceof Error
-        ? error
-        : new Error("Unable to restore default settings.")
-    );
-    const message = getConfigFailureMessage("restore", error);
-    setConfigFeedback(body, message, "error");
-    setActionStatus(body, message);
-  }
 }
 
 function restoreDefaultPromptPresets(body: HTMLDivElement): void {
@@ -1153,19 +1163,193 @@ function restoreDefaultPromptPresets(body: HTMLDivElement): void {
     renderPromptPresetOptions(body);
     syncPromptPresetEditor(body);
     refreshRequestPreview(body);
-    const message = "Default prompt presets restored.";
+    const message = "已恢复默认提示词预设。";
     setConfigFeedback(body, message, "success");
     setActionStatus(body, message);
   } catch (error) {
     Zotero.logError(
       error instanceof Error
         ? error
-        : new Error("Unable to restore default prompt presets.")
+        : new Error("无法恢复默认提示词预设。")
     );
-    const message = "Unable to restore default prompt presets right now.";
+    const message = "暂时无法恢复默认提示词预设。";
     setConfigFeedback(body, message, "error");
     setActionStatus(body, message);
   }
+}
+
+function handlePaneActionError(
+  body: HTMLDivElement,
+  error: unknown,
+  fallbackMessage: string,
+  feedbackTone: ConfigFeedbackTone = "error"
+): void {
+  const message =
+    error instanceof Error && error.message.trim()
+      ? error.message.trim()
+      : fallbackMessage;
+
+  Zotero.logError(
+    error instanceof Error ? error : new Error(message)
+  );
+  setConfigFeedback(body, message, feedbackTone);
+  setActionStatus(body, message);
+  setPaneState(body, "error", message);
+}
+
+function handlePaneButtonAction(
+  body: HTMLDivElement,
+  role: string
+): void {
+  setActionStatus(body, `调试：已触发 ${role}`);
+
+  switch (role) {
+    case "send-button":
+      void sendCurrentPreview(body).catch((error) => {
+        handlePaneActionError(body, error, "发送消息失败。");
+      });
+      return;
+    case "copy-button":
+      copyOutput(body);
+      return;
+    case "save-preset-button":
+      try {
+        const preset = saveSelectedPromptPreset(body);
+
+        if (!preset) {
+          setConfigFeedback(body, "当前无法保存提示词预设。", "error");
+          setActionStatus(body, "当前无法保存提示词预设。");
+          return;
+        }
+
+        const message = `提示词预设“${preset.label}”已保存。`;
+        setConfigFeedback(body, message, "success");
+        setActionStatus(body, message);
+      } catch (error) {
+        handlePaneActionError(body, error, "保存提示词预设失败。");
+      }
+      return;
+    case "new-preset-button":
+      try {
+        const preset = createPromptPresetFromEditor(body);
+
+        if (!preset) {
+          setConfigFeedback(body, "当前无法创建提示词预设。", "error");
+          setActionStatus(body, "当前无法创建提示词预设。");
+          return;
+        }
+
+        const message = `已创建提示词预设“${preset.label}”。`;
+        setConfigFeedback(body, message, "success");
+        setActionStatus(body, message);
+      } catch (error) {
+        handlePaneActionError(body, error, "创建提示词预设失败。");
+      }
+      return;
+    case "delete-preset-button":
+      try {
+        const preset = removeSelectedPromptPreset(body);
+
+        if (!preset) {
+          return;
+        }
+
+        const message = `已删除提示词预设，当前切换到“${preset.label}”。`;
+        setConfigFeedback(body, message, "success");
+        setActionStatus(body, message);
+      } catch (error) {
+        handlePaneActionError(body, error, "删除提示词预设失败。");
+      }
+      return;
+    case "reset-presets-button":
+      try {
+        restoreDefaultPromptPresets(body);
+      } catch (error) {
+        handlePaneActionError(body, error, "恢复默认提示词预设失败。");
+      }
+      return;
+    case "clear-button":
+      clearOutput(body);
+      return;
+    case "jump-latest-button":
+      scrollChatToLatest(body);
+      setActionStatus(body, "已跳转到最新消息。");
+      return;
+    default:
+      return;
+  }
+}
+
+function bindPaneInteractions(body: HTMLDivElement): void {
+  if (body.dataset.sideaiBound === "true") {
+    return;
+  }
+
+  const handleButtonLikeEvent = (event: Event) => {
+    const target = event.target as Element | null;
+    const button = target?.closest("[data-sideai-role]") as HTMLElement | null;
+    const role = button?.dataset.sideaiRole;
+
+    if (!role) {
+      return;
+    }
+
+    if (
+      role !== "send-button" &&
+      role !== "copy-button" &&
+      role !== "save-preset-button" &&
+      role !== "new-preset-button" &&
+      role !== "delete-preset-button" &&
+      role !== "reset-presets-button" &&
+      role !== "clear-button" &&
+      role !== "jump-latest-button"
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    handlePaneButtonAction(body, role);
+  };
+
+  body.addEventListener("click", handleButtonLikeEvent, true);
+  body.addEventListener("command", handleButtonLikeEvent, true);
+  body.addEventListener("mouseup", handleButtonLikeEvent, true);
+
+  const composerInput = getComposerInput(body);
+  const promptPresetSelect = getPromptPresetSelect(body);
+  const systemPromptInput = getSystemPromptInput(body);
+
+  composerInput?.addEventListener("input", () => {
+    refreshRequestPreview(body);
+  });
+  composerInput?.addEventListener("keydown", (event: KeyboardEvent) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      void sendCurrentPreview(body).catch((error) => {
+        handlePaneActionError(body, error, "发送消息失败。");
+      });
+    }
+  });
+
+  promptPresetSelect?.addEventListener("change", () => {
+    const selectedPreset = getSavedPromptPresets().find(
+      (preset) => preset.id === promptPresetSelect.value
+    );
+
+    if (selectedPreset && systemPromptInput) {
+      systemPromptInput.value = selectedPreset.prompt;
+    }
+    saveSelectedPromptPresetId(promptPresetSelect.value);
+    syncPromptPresetEditor(body);
+    refreshRequestPreview(body);
+  });
+
+  systemPromptInput?.addEventListener("input", () => {
+    refreshRequestPreview(body);
+  });
+
+  body.dataset.sideaiBound = "true";
 }
 
 function getReaderAttachmentItem(): Zotero.Item | undefined {
@@ -1221,6 +1405,7 @@ function renderPane(
   item: Zotero.Item | undefined,
   tabType: string
 ): void {
+  bindPaneInteractions(body);
   applyPaneLayout(body);
 
   const paneItem = resolveActivePaneItem(item, tabType);
@@ -1234,22 +1419,22 @@ function renderPane(
     notesText: currentTextContext.notesText,
     pdfSelectionText: currentTextContext.pdfSelectionText,
     title: currentTextContext.title
-  }) || "Selected item has no previewable text yet.";
+  }) || "当前条目暂无可发送的预览文本。";
   if (
     currentTextContext.contextSource === "pdf-reader" &&
     !currentTextContext.pdfSelectionText
   ) {
     currentTextContext.contextWarnings?.push(
-      "No PDF text is selected. Falling back to item metadata context."
+      "当前未选中 PDF 文本，已回退到条目元数据上下文。"
     );
   }
   if (
     currentTextContext.contextSource === "pdf-reader" &&
     (!currentTextContext.previewText ||
-      currentTextContext.previewText === "Selected item has no previewable text yet.")
+      currentTextContext.previewText === "当前条目暂无可发送的预览文本。")
   ) {
     currentTextContext.contextWarnings?.push(
-      "No PDF selection or item metadata text is currently available."
+      "当前既没有 PDF 选区，也没有可用的条目元数据文本。"
     );
   }
   const sessionKey = getItemSessionKey(paneItem.activeItem);
@@ -1285,17 +1470,16 @@ function renderPane(
     body,
     getSavedApiKey() ||
       getSavedBaseUrl() !== getDefaultBaseUrl() ||
-      getSavedModel() !== getDefaultModel() ||
-      getSavedSystemPrompt() !== getDefaultSystemPrompt()
-      ? "Saved API Key, Base URL, model, and fixed prompt are loaded from local settings."
-      : "API Key, Base URL, model, and fixed prompt are not saved yet.",
+      getSavedModel() !== getDefaultModel()
+      ? "连接设置已从插件设置页加载。"
+      : "请在 编辑 -> 插件 -> SideAI 中填写连接设置。",
     "neutral"
   );
 
   if (contextPreviewElement) {
     contextPreviewElement.textContent = [
       ...(currentTextContext.contextWarnings || []).map(
-        (warning) => `[Warning] ${warning}`
+        (warning) => `[警告] ${warning}`
       ),
       currentTextContext.previewText
     ]
@@ -1306,12 +1490,12 @@ function renderPane(
   if (requestPreviewElement) {
     requestPreviewElement.textContent = hasItem
       ? ""
-      : "Select an item to inspect the final request preview.";
+      : "请选择一个条目以查看最终请求预览。";
   }
   refreshRequestPreview(body);
 
   if (outputPreviewElement) {
-    outputPreviewElement.textContent = hasItem ? OUTPUT_PLACEHOLDER : "No output yet.";
+    outputPreviewElement.textContent = hasItem ? OUTPUT_PLACEHOLDER : "暂无输出。";
     renderChatStream(body);
   }
   renderHistoryList(body);
@@ -1339,7 +1523,7 @@ function copyOutput(body: HTMLDivElement): void {
 
   if (!outputText) {
     if (actionStatusElement) {
-      actionStatusElement.textContent = "No output available to copy.";
+      actionStatusElement.textContent = "当前没有可复制的输出内容。";
     }
     return;
   }
@@ -1347,14 +1531,14 @@ function copyOutput(body: HTMLDivElement): void {
   Zotero.Utilities.Internal.copyTextToClipboard(outputText);
 
   if (actionStatusElement) {
-    actionStatusElement.textContent = "Output copied to clipboard.";
+    actionStatusElement.textContent = "已复制输出内容到剪贴板。";
   }
 }
 
 function clearOutput(body: HTMLDivElement): void {
   setChatMessages(body, []);
   renderChatStream(body);
-  setActionStatus(body, "Current item session output cleared.");
+  setActionStatus(body, "已清空当前条目的会话输出。");
   setPaneState(body, "ready");
 }
 
@@ -1369,31 +1553,28 @@ async function sendCurrentPreview(
     "empty") as PaneState;
 
   if (!shouldStartSendRequest(currentState)) {
-    setActionStatus(body, "Request is already in progress.");
+    setActionStatus(body, "请求正在进行中。");
     return;
   }
 
-  const baseUrlInput = getBaseUrlInput(body);
-  const modelInput = getModelInput(body);
   const systemPromptInput = getSystemPromptInput(body);
-  const apiKeyInput = getApiKeyInput(body);
   const outputPreviewElement = body.querySelector(
     "[data-sideai-role='output-preview']"
   ) as HTMLDivElement | null;
   const currentTextContext = paneContextStore.get(body) || {
     abstractText: "",
     contextSource: "item",
-    contextSourceLabel: "Item Context",
+    contextSourceLabel: "条目上下文",
     notesText: "",
     pdfSelectionText: "",
-    previewText: "No current text available.",
-    title: "No item selected"
+    previewText: "当前没有可用文本。",
+    title: "未选择条目"
   };
 
   const missingFields = getMissingConfigFields({
-    apiKey: apiKeyInput?.value || "",
-    baseUrl: baseUrlInput?.value || "",
-    model: modelInput?.value || "",
+    apiKey: getSavedApiKey(),
+    baseUrl: getSavedBaseUrl(),
+    model: getSavedModel(),
     systemPrompt: systemPromptInput?.value || ""
   });
 
@@ -1405,8 +1586,8 @@ async function sendCurrentPreview(
   }
 
   const currentText = currentTextContext?.previewText?.trim() || "";
-  if (!currentText || currentText === "No current text available.") {
-    setPaneState(body, "error", "No current text available to send.");
+  if (!currentText || currentText === "当前没有可用文本。") {
+    setPaneState(body, "error", "当前没有可发送的文本。");
     return;
   }
 
@@ -1433,8 +1614,8 @@ async function sendCurrentPreview(
     body,
     buildChatMessageEntry({
       content: retryOptions
-        ? "Retrying failed request..."
-        : "Requesting model response...",
+        ? "正在重试失败请求..."
+        : "正在请求模型回复...",
       mode: "text",
       role: "status",
       tone: "loading"
@@ -1446,10 +1627,10 @@ async function sendCurrentPreview(
 
   try {
     const responseText = await requestChatCompletionsText({
-      apiKey: apiKeyInput?.value || "",
-      baseUrl: baseUrlInput?.value || "",
+      apiKey: getSavedApiKey(),
+      baseUrl: getSavedBaseUrl(),
       messages: previewMessages,
-      model: retryOptions?.model || modelInput?.value || "",
+      model: retryOptions?.model || getSavedModel(),
       timeoutMs: 30000
     });
 
@@ -1473,7 +1654,7 @@ async function sendCurrentPreview(
     );
     renderHistoryList(body);
 
-    setActionStatus(body, "Response received successfully.");
+    setActionStatus(body, "已成功收到回复。");
     const composerInput = getComposerInput(body);
     if (composerInput) {
       composerInput.value = "";
@@ -1484,17 +1665,17 @@ async function sendCurrentPreview(
     const message =
       error instanceof Error && error.message.trim()
         ? error.message.trim()
-        : "Request failed.";
+        : "请求失败。";
 
     setChatMessages(body, removeLoadingChatMessages(getChatMessages(body)));
     pushChatMessage(
       body,
       buildChatMessageEntry({
-        content: `Request failed.\n\n${message}`,
+        content: `请求失败。\n\n${message}`,
         mode: "text",
         role: "status",
         retryMessages: previewMessages,
-        retryModel: retryOptions?.model || modelInput?.value || "",
+        retryModel: retryOptions?.model || getSavedModel(),
         tone: "error"
       })
     );
@@ -1502,7 +1683,7 @@ async function sendCurrentPreview(
     pushSessionHistory(
       body,
       buildHistoryEntry({
-        content: `Request failed.\n\n${message}`,
+        content: `请求失败。\n\n${message}`,
         mode: "text",
         status: "error"
       })
@@ -1531,48 +1712,47 @@ export function registerSideAIPane(): false | string {
     },
     bodyXHTML: `
       <html:div class="sideai-pane-root">
-        <html:div class="sideai-pane-state" data-sideai-role="panel-state">Loading...</html:div>
+        <html:div class="sideai-pane-state" data-sideai-role="panel-state">加载中...</html:div>
+        <html:div class="sideai-pane-section" data-sideai-section="chat">
+          <html:div class="sideai-pane-label">对话</html:div>
+          <html:div class="sideai-pane-card">
+            <html:div class="sideai-pane-title" data-sideai-role="title">加载中...</html:div>
+            <html:div class="sideai-pane-label">历史会话消息</html:div>
+            <html:div data-sideai-role="output-badge">空闲</html:div>
+            <html:div class="sideai-pane-output" data-sideai-role="output-preview"></html:div>
+            <html:button type="button" data-sideai-role="jump-latest-button">跳到最新</html:button>
+          </html:div>
+        </html:div>
+        <html:div class="sideai-pane-section" data-sideai-section="composer">
+          <html:div class="sideai-pane-label">输入</html:div>
+          <html:div class="sideai-pane-card">
+            <html:div class="sideai-pane-label">向当前会话继续发送消息</html:div>
+            <html:textarea
+              id="sideai-composer"
+              class="sideai-config-textarea"
+              placeholder="输入追问内容，或补充额外说明..."
+            ></html:textarea>
+            <html:div class="sideai-pane-actions">
+              <html:button type="button" data-sideai-role="send-button" disabled="true">发送</html:button>
+              <html:button type="button" data-sideai-role="copy-button" disabled="true">复制</html:button>
+              <html:button type="button" data-sideai-role="clear-button">清空</html:button>
+            </html:div>
+            <html:div class="sideai-pane-muted" data-sideai-role="action-status"></html:div>
+          </html:div>
+        </html:div>
         <html:div class="sideai-pane-section">
-          <html:div class="sideai-pane-label">Configuration</html:div>
+          <html:div class="sideai-pane-label">提示词</html:div>
           <html:div class="sideai-pane-card">
             <html:div class="sideai-config-grid">
               <html:div class="sideai-config-row">
-                <html:label class="sideai-config-label" for="sideai-baseurl">Base URL</html:label>
-                <html:input
-                  id="sideai-baseurl"
-                  class="sideai-config-input"
-                  type="text"
-                  value="${getDefaultBaseUrl()}"
-                />
-              </html:div>
-              <html:div class="sideai-config-row">
-                <html:label class="sideai-config-label" for="sideai-model">Model</html:label>
-                <html:input
-                  id="sideai-model"
-                  class="sideai-config-input"
-                  type="text"
-                  value="${getDefaultModel()}"
-                />
-              </html:div>
-              <html:div class="sideai-config-row">
-                <html:label class="sideai-config-label" for="sideai-apikey">API Key</html:label>
-                <html:input
-                  id="sideai-apikey"
-                  class="sideai-config-input"
-                  type="password"
-                  value=""
-                  placeholder="sk-..."
-                />
-              </html:div>
-              <html:div class="sideai-config-row">
-                <html:label class="sideai-config-label" for="sideai-prompt-preset">Prompt Preset</html:label>
+                <html:label class="sideai-config-label" for="sideai-prompt-preset">提示词预设</html:label>
                 <html:select
                   id="sideai-prompt-preset"
                   class="sideai-config-input"
                 ></html:select>
               </html:div>
               <html:div class="sideai-config-row">
-                <html:label class="sideai-config-label" for="sideai-prompt-preset-label">Preset Name</html:label>
+                <html:label class="sideai-config-label" for="sideai-prompt-preset-label">预设名称</html:label>
                 <html:input
                   id="sideai-prompt-preset-label"
                   class="sideai-config-input"
@@ -1581,71 +1761,32 @@ export function registerSideAIPane(): false | string {
                 />
               </html:div>
               <html:div class="sideai-config-row">
-                <html:label class="sideai-config-label" for="sideai-system-prompt">Fixed Prompt</html:label>
+                <html:label class="sideai-config-label" for="sideai-system-prompt">固定提示词</html:label>
                 <html:textarea
                   id="sideai-system-prompt"
                   class="sideai-config-textarea"
                 >${getDefaultSystemPrompt()}</html:textarea>
               </html:div>
               <html:div class="sideai-pane-actions">
-                <html:button data-sideai-role="new-preset-button">New Preset</html:button>
-                <html:button data-sideai-role="save-preset-button">Save Preset</html:button>
-                <html:button data-sideai-role="delete-preset-button">Delete Preset</html:button>
-                <html:button data-sideai-role="reset-presets-button">Reset Presets</html:button>
-              </html:div>
-              <html:div class="sideai-pane-actions">
-                <html:button data-sideai-role="save-settings-button">Save Settings</html:button>
-                <html:button data-sideai-role="reset-settings-button">Restore Defaults</html:button>
+                <html:button type="button" data-sideai-role="new-preset-button">新建预设</html:button>
+                <html:button type="button" data-sideai-role="save-preset-button">保存预设</html:button>
+                <html:button type="button" data-sideai-role="delete-preset-button">删除预设</html:button>
+                <html:button type="button" data-sideai-role="reset-presets-button">恢复预设</html:button>
               </html:div>
               <html:div data-sideai-role="config-feedback" data-sideai-tone="neutral"></html:div>
             </html:div>
           </html:div>
         </html:div>
         <html:div class="sideai-pane-section">
-          <html:div class="sideai-pane-label">Context</html:div>
+          <html:div class="sideai-pane-label">参考信息</html:div>
           <html:div class="sideai-pane-card">
-            <html:div class="sideai-pane-title" data-sideai-role="title">Loading...</html:div>
+            <html:div class="sideai-pane-label">当前上下文</html:div>
             <html:div class="sideai-pane-muted" data-sideai-role="context-preview"></html:div>
-          </html:div>
-        </html:div>
-        <html:div class="sideai-pane-section">
-          <html:div class="sideai-pane-label">Request Preview</html:div>
-          <html:div class="sideai-pane-card">
-            <html:div class="sideai-pane-label">Final Messages</html:div>
+            <html:div class="sideai-pane-label">请求预览</html:div>
             <html:div class="sideai-pane-muted" data-sideai-role="request-preview"></html:div>
+            <html:div class="sideai-pane-label">历史摘要</html:div>
+            <html:div class="sideai-pane-muted" data-sideai-role="history-list">暂无会话历史。</html:div>
           </html:div>
-        </html:div>
-        <html:div class="sideai-pane-section">
-          <html:div class="sideai-pane-label">Output</html:div>
-          <html:div class="sideai-pane-card">
-            <html:div class="sideai-pane-label">Latest Result</html:div>
-            <html:div data-sideai-role="output-badge">Idle</html:div>
-            <html:div class="sideai-pane-output" data-sideai-role="output-preview"></html:div>
-            <html:button data-sideai-role="jump-latest-button">Jump to Latest</html:button>
-          </html:div>
-        </html:div>
-        <html:div class="sideai-pane-section">
-          <html:div class="sideai-pane-label">History</html:div>
-          <html:div class="sideai-pane-card">
-            <html:div class="sideai-pane-muted" data-sideai-role="history-list">No session history yet.</html:div>
-          </html:div>
-        </html:div>
-        <html:div class="sideai-pane-section">
-          <html:div class="sideai-pane-label">Actions</html:div>
-          <html:div class="sideai-pane-card">
-            <html:div class="sideai-pane-label">Message</html:div>
-            <html:textarea
-              id="sideai-composer"
-              class="sideai-config-textarea"
-              placeholder="Ask a follow-up question or add extra instructions..."
-            ></html:textarea>
-          </html:div>
-          <html:div class="sideai-pane-actions">
-            <html:button data-sideai-role="send-button" disabled="true">Send</html:button>
-            <html:button data-sideai-role="copy-button" disabled="true">Copy</html:button>
-            <html:button data-sideai-role="clear-button">Clear</html:button>
-          </html:div>
-          <html:div class="sideai-pane-muted" data-sideai-role="action-status"></html:div>
         </html:div>
       </html:div>
     `,
@@ -1657,9 +1798,6 @@ export function registerSideAIPane(): false | string {
       ) as HTMLButtonElement | null;
       const copyButton = body.querySelector(
         "[data-sideai-role='copy-button']"
-      ) as HTMLButtonElement | null;
-      const saveButton = body.querySelector(
-        "[data-sideai-role='save-settings-button']"
       ) as HTMLButtonElement | null;
       const savePresetButton = body.querySelector(
         "[data-sideai-role='save-preset-button']"
@@ -1673,113 +1811,54 @@ export function registerSideAIPane(): false | string {
       const resetPresetsButton = body.querySelector(
         "[data-sideai-role='reset-presets-button']"
       ) as HTMLButtonElement | null;
-      const resetButton = body.querySelector(
-        "[data-sideai-role='reset-settings-button']"
-      ) as HTMLButtonElement | null;
       const clearButton = body.querySelector(
         "[data-sideai-role='clear-button']"
       ) as HTMLButtonElement | null;
       const jumpLatestButton = body.querySelector(
         "[data-sideai-role='jump-latest-button']"
       ) as HTMLButtonElement | null;
-      const promptPresetSelect = getPromptPresetSelect(body);
-      const composerInput = getComposerInput(body);
-      const systemPromptInput = getSystemPromptInput(body);
 
       syncSavedSettings(body);
       refreshRequestPreview(body);
+      bindPaneInteractions(body);
 
-      sendButton?.addEventListener("click", () => {
-        void sendCurrentPreview(body);
+      sendButton?.addEventListener("click", (event) => {
+        event.preventDefault();
+        handlePaneButtonAction(body, "send-button");
       });
 
       copyButton?.addEventListener("click", () => {
-        copyOutput(body);
+        handlePaneButtonAction(body, "copy-button");
       });
 
-      saveButton?.addEventListener("click", () => {
-        persistSettings(body);
+      savePresetButton?.addEventListener("click", (event) => {
+        event.preventDefault();
+        handlePaneButtonAction(body, "save-preset-button");
       });
 
-      savePresetButton?.addEventListener("click", () => {
-        const preset = saveSelectedPromptPreset(body);
-
-        if (!preset) {
-          return;
-        }
-
-        const message = `Prompt preset "${preset.label}" saved.`;
-        setConfigFeedback(body, message, "success");
-        setActionStatus(body, message);
+      newPresetButton?.addEventListener("click", (event) => {
+        event.preventDefault();
+        handlePaneButtonAction(body, "new-preset-button");
       });
 
-      newPresetButton?.addEventListener("click", () => {
-        const preset = createPromptPresetFromEditor(body);
-
-        if (!preset) {
-          return;
-        }
-
-        const message = `Prompt preset "${preset.label}" created.`;
-        setConfigFeedback(body, message, "success");
-        setActionStatus(body, message);
+      deletePresetButton?.addEventListener("click", (event) => {
+        event.preventDefault();
+        handlePaneButtonAction(body, "delete-preset-button");
       });
 
-      deletePresetButton?.addEventListener("click", () => {
-        const preset = removeSelectedPromptPreset(body);
-
-        if (!preset) {
-          return;
-        }
-
-        const message = `Prompt preset deleted. Switched to "${preset.label}".`;
-        setConfigFeedback(body, message, "success");
-        setActionStatus(body, message);
+      resetPresetsButton?.addEventListener("click", (event) => {
+        event.preventDefault();
+        handlePaneButtonAction(body, "reset-presets-button");
       });
 
-      resetPresetsButton?.addEventListener("click", () => {
-        restoreDefaultPromptPresets(body);
+      clearButton?.addEventListener("click", (event) => {
+        event.preventDefault();
+        handlePaneButtonAction(body, "clear-button");
       });
 
-      resetButton?.addEventListener("click", () => {
-        restoreDefaultSettings(body);
-      });
-
-      clearButton?.addEventListener("click", () => {
-        clearOutput(body);
-      });
-
-      jumpLatestButton?.addEventListener("click", () => {
-        scrollChatToLatest(body);
-        setActionStatus(body, "Jumped to the latest message.");
-      });
-
-      promptPresetSelect?.addEventListener("change", () => {
-        const selectedPreset = getSavedPromptPresets().find(
-          (preset) => preset.id === promptPresetSelect.value
-        );
-
-        if (selectedPreset && systemPromptInput) {
-          systemPromptInput.value = selectedPreset.prompt;
-        }
-        saveSelectedPromptPresetId(promptPresetSelect.value);
-        syncPromptPresetEditor(body);
-        refreshRequestPreview(body);
-      });
-
-      composerInput?.addEventListener("input", () => {
-        refreshRequestPreview(body);
-      });
-
-      composerInput?.addEventListener("keydown", (event: KeyboardEvent) => {
-        if (event.key === "Enter" && !event.shiftKey) {
-          event.preventDefault();
-          void sendCurrentPreview(body);
-        }
-      });
-
-      systemPromptInput?.addEventListener("input", () => {
-        refreshRequestPreview(body);
+      jumpLatestButton?.addEventListener("click", (event) => {
+        event.preventDefault();
+        handlePaneButtonAction(body, "jump-latest-button");
       });
     },
     onItemChange: ({ item, setEnabled, tabType }) => {
@@ -1788,6 +1867,7 @@ export function registerSideAIPane(): false | string {
     },
     onRender: ({ body, item, setSectionSummary, tabType }) => {
       const paneItem = resolveActivePaneItem(item, tabType);
+      bindPaneInteractions(body);
       renderPane(body, item, tabType);
       setSectionSummary(getItemTitle(paneItem.activeItem));
     }

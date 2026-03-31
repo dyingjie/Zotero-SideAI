@@ -6,7 +6,7 @@ export function stripHtml(html: string): string {
 }
 
 export const MAX_CONTEXT_PREVIEW_LENGTH = 6000;
-export const TRUNCATED_PREVIEW_SUFFIX = "\n\n[Truncated for sending]";
+export const TRUNCATED_PREVIEW_SUFFIX = "\n\n[内容过长，已截断后发送]";
 
 export type CurrentTextContext = {
   abstractText: string;
@@ -53,19 +53,19 @@ export function buildPreviewTextFromContext(context: {
   const sections: string[] = [];
 
   if (context.pdfSelectionText) {
-    sections.push(`PDF Selection:\n${context.pdfSelectionText}`);
+    sections.push(`PDF 选中文本：\n${context.pdfSelectionText}`);
   }
 
-  if (context.title && context.title !== "Untitled item") {
-    sections.push(`Title:\n${context.title}`);
+  if (context.title && context.title !== "未命名条目") {
+    sections.push(`标题：\n${context.title}`);
   }
 
   if (context.abstractText) {
-    sections.push(`Abstract:\n${context.abstractText}`);
+    sections.push(`摘要：\n${context.abstractText}`);
   }
 
   if (context.notesText) {
-    sections.push(`Notes:\n${context.notesText}`);
+    sections.push(`笔记：\n${context.notesText}`);
   }
 
   return truncatePreviewText(sections.join("\n\n"));

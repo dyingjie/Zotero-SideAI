@@ -7,6 +7,7 @@ class Addon {
     config: typeof config;
     env: "development" | "production";
     initialized: boolean;
+    preferencePaneKey?: string;
     sidebarPaneKey: false | string;
   };
 
@@ -19,6 +20,7 @@ class Addon {
       config,
       env: __env__,
       initialized: false,
+      preferencePaneKey: undefined,
       sidebarPaneKey: false
     };
     this.hooks = hooks;

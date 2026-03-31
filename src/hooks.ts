@@ -2,6 +2,7 @@ import {
   registerSideAIPane,
   unregisterSideAIPane
 } from "./sidebar/item-pane";
+import { registerSideAIPreferencePane } from "./preferences/register";
 
 function log(message: string): void {
   Zotero.debug(`[Zotero SideAI] ${message}`);
@@ -15,6 +16,7 @@ async function onStartup() {
   ]);
 
   addon.data.sidebarPaneKey = registerSideAIPane();
+  addon.data.preferencePaneKey = await registerSideAIPreferencePane();
   log("Plugin startup completed.");
   addon.data.initialized = true;
 }

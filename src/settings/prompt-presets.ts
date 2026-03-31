@@ -10,25 +10,25 @@ export type PromptPreset = {
   prompt: string;
 };
 
-const FALLBACK_PROMPT_PRESET_LABEL = "Custom Preset";
+const FALLBACK_PROMPT_PRESET_LABEL = "自定义预设";
 
 const DEFAULT_PROMPT_PRESETS: PromptPreset[] = [
   {
     id: "summary",
-    label: "Summary",
+    label: "总结",
     prompt: getDefaultSystemPrompt()
   },
   {
     id: "methods",
-    label: "Methods",
+    label: "方法",
     prompt:
-      "You are an academic reading assistant. Focus on the paper's methods, workflow, assumptions, and implementation details."
+      "你是一名学术阅读助手。请重点关注论文的方法、流程、假设和实现细节。"
   },
   {
     id: "critique",
-    label: "Critique",
+    label: "评述",
     prompt:
-      "You are an academic reading assistant. Critically evaluate the paper's strengths, weaknesses, risks, and open questions without inventing facts."
+      "你是一名学术阅读助手。请批判性评估论文的优点、缺点、风险和开放问题，不要编造事实。"
   }
 ];
 
@@ -220,7 +220,7 @@ export function getSelectedPromptPreset(): PromptPreset {
     presets.find((preset) => preset.id === selectedId) ||
     presets[0] || {
       id: "summary",
-      label: "Summary",
+      label: "总结",
       prompt: getDefaultSystemPrompt()
     }
   );

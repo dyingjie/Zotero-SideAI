@@ -11,7 +11,7 @@ export function getMissingConfigFields(config: {
   }
 
   if (!config.model.trim()) {
-    missingFields.push("Model");
+    missingFields.push("模型");
   }
 
   if (!config.apiKey.trim()) {
@@ -19,12 +19,12 @@ export function getMissingConfigFields(config: {
   }
 
   if (!config.systemPrompt.trim()) {
-    missingFields.push("Fixed Prompt");
+    missingFields.push("固定提示词");
   }
 
   return missingFields;
 }
 
 export function getMissingConfigMessage(missingFields: string[]): string {
-  return `Please complete required settings before sending: ${missingFields.join(", ")}.`;
+  return `发送前请先补全这些必填设置：${missingFields.join("、")}。`;
 }

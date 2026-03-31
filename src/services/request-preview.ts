@@ -6,7 +6,7 @@ import {
   type ChatCompletionMessage
 } from "./chat-completions";
 
-const DEFAULT_TASK_INSTRUCTION = "Please analyze the following paper.";
+const DEFAULT_TASK_INSTRUCTION = "请分析以下文献内容。";
 
 export function buildPreviewMessages(input: {
   context: CurrentTextContext;
@@ -36,7 +36,7 @@ export function formatPreviewMessages(
   );
 
   if (context?.contextSourceLabel) {
-    sections.unshift(`Context Source:\n${context.contextSourceLabel}`);
+    sections.unshift(`上下文来源：\n${context.contextSourceLabel}`);
   }
 
   return sections.join("\n\n");
