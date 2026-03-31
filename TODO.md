@@ -341,7 +341,7 @@ docs/
 - [x] 提示词策略：多提示词预设，但每次发送只勾选一个
 - [x] PDF 支持：在 PDF 阅读界面侧边栏直接可用
 - [x] PDF 上下文优先级：当前文献元数据 + 当前 PDF 选中文本
-- [ ] 第二版继续使用 OpenAI Chat Completions 兼容接口
+- [x] 第二版继续使用 OpenAI Chat Completions 兼容接口
 
 ### Phase 11：聊天窗口重构
 
