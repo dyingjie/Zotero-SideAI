@@ -26,6 +26,10 @@ import {
   getMissingConfigMessage
 } from "../src/sidebar/send-validation";
 import {
+  COMPACT_PANE_WIDTH,
+  getPaneLayoutProfile
+} from "../src/sidebar/layout-profile";
+import {
   shouldEnableSendButton,
   shouldStartSendRequest
 } from "../src/sidebar/pane-state";
@@ -210,6 +214,23 @@ describe("startup", function () {
     );
 
     assert.strictEqual(mergeNotePreviewTexts(["", "   ", "<p></p>"]), "");
+  });
+
+  it("should adapt pane layout for narrow Zotero sidebar widths", function () {
+    const compactLayout = getPaneLayoutProfile(COMPACT_PANE_WIDTH - 1);
+    const regularLayout = getPaneLayoutProfile(COMPACT_PANE_WIDTH);
+
+    assert.strictEqual(compactLayout.isCompact, true);
+    assert.strictEqual(compactLayout.buttonFlex, "1 1 100%");
+    assert.strictEqual(compactLayout.buttonWhiteSpace, "normal");
+    assert.strictEqual(compactLayout.cardPadding, "6px");
+    assert.strictEqual(compactLayout.outputMaxHeight, "144px");
+
+    assert.strictEqual(regularLayout.isCompact, false);
+    assert.strictEqual(regularLayout.buttonFlex, "1 1 80px");
+    assert.strictEqual(regularLayout.buttonWhiteSpace, "nowrap");
+    assert.strictEqual(regularLayout.cardPadding, "8px");
+    assert.strictEqual(regularLayout.outputMaxHeight, "180px");
   });
 
   it("should sanitize abnormal html-like note text into safe preview text", function () {

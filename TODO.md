@@ -234,7 +234,7 @@ docs/
 
 - [x] Windows
 - [ ] macOS
-- [ ] Zotero 8 不同窗口尺寸
+- [x] Zotero 8 不同窗口尺寸
 
 交付标准：
 

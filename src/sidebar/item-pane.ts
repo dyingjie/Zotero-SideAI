@@ -39,6 +39,7 @@ import {
   type OutputRenderMode,
   type SessionHistoryEntry
 } from "./session-history";
+import { getPaneLayoutProfile } from "./layout-profile";
 import {
   type PaneState,
   shouldEnableSendButton,
@@ -67,6 +68,8 @@ function pushSessionHistory(
 }
 
 function applyPaneLayout(body: HTMLDivElement): void {
+  const paneWidth = body.clientWidth || body.getBoundingClientRect().width;
+  const layoutProfile = getPaneLayoutProfile(paneWidth);
   const root = body.querySelector(".sideai-pane-root") as HTMLDivElement | null;
   const cards = body.querySelectorAll(".sideai-pane-card");
   const mutedBlocks = body.querySelectorAll(".sideai-pane-muted");
@@ -90,7 +93,7 @@ function applyPaneLayout(body: HTMLDivElement): void {
   if (root) {
     root.style.display = "flex";
     root.style.flexDirection = "column";
-    root.style.gap = "10px";
+    root.style.gap = layoutProfile.rootGap;
     root.style.width = "100%";
     root.style.boxSizing = "border-box";
     root.style.overflowX = "hidden";
@@ -122,7 +125,7 @@ function applyPaneLayout(body: HTMLDivElement): void {
 
   cards.forEach((card: Element) => {
     const element = card as HTMLDivElement;
-    element.style.padding = "8px";
+    element.style.padding = layoutProfile.cardPadding;
     element.style.borderRadius = "8px";
     element.style.boxSizing = "border-box";
     element.style.background = "var(--fill-quinary, rgba(0,0,0,0.05))";
@@ -166,13 +169,13 @@ function applyPaneLayout(body: HTMLDivElement): void {
   const stringTokens = body.querySelectorAll(".sideai-token-string");
 
   if (contextPreview) {
-    contextPreview.style.maxHeight = "120px";
+    contextPreview.style.maxHeight = layoutProfile.contextMaxHeight;
     contextPreview.style.overflowY = "auto";
   }
 
   if (outputPreview) {
     outputPreview.style.minHeight = "84px";
-    outputPreview.style.maxHeight = "180px";
+    outputPreview.style.maxHeight = layoutProfile.outputMaxHeight;
     outputPreview.style.overflowY = "auto";
     outputPreview.style.overflowWrap = "anywhere";
     outputPreview.style.lineHeight = "1.5";
@@ -244,7 +247,7 @@ function applyPaneLayout(body: HTMLDivElement): void {
 
   if (requestPreview) {
     requestPreview.style.minHeight = "84px";
-    requestPreview.style.maxHeight = "180px";
+    requestPreview.style.maxHeight = layoutProfile.requestMaxHeight;
     requestPreview.style.overflowY = "auto";
     requestPreview.style.whiteSpace = "pre-wrap";
     requestPreview.style.overflowWrap = "anywhere";
@@ -254,7 +257,7 @@ function applyPaneLayout(body: HTMLDivElement): void {
     historyList.style.display = "flex";
     historyList.style.flexDirection = "column";
     historyList.style.gap = "6px";
-    historyList.style.maxHeight = "160px";
+    historyList.style.maxHeight = layoutProfile.historyMaxHeight;
     historyList.style.overflowY = "auto";
   }
 
@@ -332,16 +335,17 @@ function applyPaneLayout(body: HTMLDivElement): void {
   if (actions) {
     actions.style.display = "flex";
     actions.style.flexWrap = "wrap";
-    actions.style.gap = "6px";
+    actions.style.gap = layoutProfile.actionsGap;
     actions.style.width = "100%";
   }
 
   buttons.forEach((button: Element) => {
     const element = button as HTMLButtonElement;
-    element.style.flex = "1 1 80px";
+    element.style.flex = layoutProfile.buttonFlex;
     element.style.minWidth = "0";
     element.style.maxWidth = "100%";
-    element.style.whiteSpace = "nowrap";
+    element.style.minHeight = layoutProfile.buttonMinHeight;
+    element.style.whiteSpace = layoutProfile.buttonWhiteSpace;
     element.style.overflow = "hidden";
     element.style.textOverflow = "ellipsis";
   });
@@ -349,7 +353,7 @@ function applyPaneLayout(body: HTMLDivElement): void {
   if (configGrid) {
     configGrid.style.display = "flex";
     configGrid.style.flexDirection = "column";
-    configGrid.style.gap = "8px";
+    configGrid.style.gap = layoutProfile.configGap;
     configGrid.style.width = "100%";
   }
 
@@ -381,7 +385,7 @@ function applyPaneLayout(body: HTMLDivElement): void {
     const element = textarea as HTMLTextAreaElement;
     element.style.width = "100%";
     element.style.minWidth = "0";
-    element.style.minHeight = "96px";
+    element.style.minHeight = layoutProfile.textareaMinHeight;
     element.style.boxSizing = "border-box";
     element.style.padding = "8px";
     element.style.borderRadius = "6px";
