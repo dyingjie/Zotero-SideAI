@@ -1405,6 +1405,43 @@ describe("startup", function () {
     });
   });
 
+  it("should restore a saved item chat session after reload-like deserialization", function () {
+    const itemKey = "item:101";
+    const persisted = {
+      chats: {
+        [itemKey]: [
+          buildChatMessageEntry({
+            content: "Question before restart",
+            mode: "text",
+            role: "user"
+          }),
+          buildChatMessageEntry({
+            content: "Answer before restart",
+            mode: "markdown",
+            role: "assistant"
+          })
+        ]
+      },
+      history: {
+        [itemKey]: [
+          buildHistoryEntry({
+            content: "Answer before restart",
+            mode: "markdown",
+            status: "success"
+          })
+        ]
+      }
+    };
+
+    const restored = deserializeChatSessions(serializeChatSessions(persisted));
+
+    assert.strictEqual(restored.chats[itemKey].length, 2);
+    assert.strictEqual(restored.chats[itemKey][0].content, "Question before restart");
+    assert.strictEqual(restored.chats[itemKey][1].content, "Answer before restart");
+    assert.strictEqual(restored.history[itemKey].length, 1);
+    assert.strictEqual(restored.history[itemKey][0].content, "Answer before restart");
+  });
+
   it("should clean plugin instance on shutdown", async function () {
     const plugin = Zotero[config.addonInstance] as {
       data: { alive?: boolean; initialized?: boolean };
