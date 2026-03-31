@@ -10,6 +10,8 @@ export type PromptPreset = {
   prompt: string;
 };
 
+const FALLBACK_PROMPT_PRESET_LABEL = "Custom Preset";
+
 const DEFAULT_PROMPT_PRESETS: PromptPreset[] = [
   {
     id: "summary",
@@ -40,6 +42,40 @@ function getSelectedPromptPresetPrefKey(): string {
 
 export function getDefaultPromptPresets(): PromptPreset[] {
   return DEFAULT_PROMPT_PRESETS.map((preset) => ({ ...preset }));
+}
+
+function normalizePromptPresetLabel(label: string): string {
+  const normalized = label.trim();
+  return normalized || FALLBACK_PROMPT_PRESET_LABEL;
+}
+
+function buildPromptPresetId(
+  label: string,
+  presets: PromptPreset[],
+  currentId?: string
+): string {
+  const baseId =
+    label
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "preset";
+  const occupiedIds = new Set(
+    presets
+      .map((preset) => preset.id)
+      .filter((presetId) => presetId && presetId !== currentId)
+  );
+
+  if (!occupiedIds.has(baseId)) {
+    return baseId;
+  }
+
+  let suffix = 2;
+  while (occupiedIds.has(`${baseId}-${suffix}`)) {
+    suffix += 1;
+  }
+
+  return `${baseId}-${suffix}`;
 }
 
 export function getSavedPromptPresets(): PromptPreset[] {
@@ -90,6 +126,63 @@ export function savePromptPresets(presets: PromptPreset[]): void {
     JSON.stringify(nextPresets),
     true
   );
+}
+
+export function addPromptPreset(
+  presets: PromptPreset[],
+  label: string,
+  prompt: string
+): PromptPreset[] {
+  const normalizedLabel = normalizePromptPresetLabel(label);
+  const normalizedPrompt = prompt.trim() || getDefaultSystemPrompt();
+
+  return [
+    ...presets,
+    {
+      id: buildPromptPresetId(normalizedLabel, presets),
+      label: normalizedLabel,
+      prompt: normalizedPrompt
+    }
+  ];
+}
+
+export function updatePromptPreset(
+  presets: PromptPreset[],
+  presetId: string,
+  updates: {
+    label?: string;
+    prompt?: string;
+  }
+): PromptPreset[] {
+  return presets.map((preset) => {
+    if (preset.id !== presetId) {
+      return preset;
+    }
+
+    const label =
+      typeof updates.label === "string"
+        ? normalizePromptPresetLabel(updates.label)
+        : preset.label;
+    const prompt =
+      typeof updates.prompt === "string"
+        ? updates.prompt.trim() || preset.prompt
+        : preset.prompt;
+
+    return {
+      ...preset,
+      id: buildPromptPresetId(label, presets, preset.id),
+      label,
+      prompt
+    };
+  });
+}
+
+export function deletePromptPreset(
+  presets: PromptPreset[],
+  presetId: string
+): PromptPreset[] {
+  const nextPresets = presets.filter((preset) => preset.id !== presetId);
+  return nextPresets.length ? nextPresets : presets;
 }
 
 export function getSelectedPromptPresetId(): string {

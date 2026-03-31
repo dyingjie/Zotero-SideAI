@@ -6,11 +6,14 @@ import {
 } from "../settings/base-url";
 import { getDefaultModel, getSavedModel, saveModel } from "../settings/model";
 import {
+  addPromptPreset,
+  deletePromptPreset,
   getSavedPromptPresets,
   getSelectedPromptPreset,
   getSelectedPromptPresetId,
   savePromptPresets,
   saveSelectedPromptPresetId,
+  updatePromptPreset,
   type PromptPreset
 } from "../settings/prompt-presets";
 import {
@@ -673,6 +676,12 @@ function getPromptPresetSelect(body: HTMLDivElement): HTMLSelectElement | null {
   return body.querySelector("#sideai-prompt-preset") as HTMLSelectElement | null;
 }
 
+function getPromptPresetLabelInput(
+  body: HTMLDivElement
+): HTMLInputElement | null {
+  return body.querySelector("#sideai-prompt-preset-label") as HTMLInputElement | null;
+}
+
 function getComposerInput(body: HTMLDivElement): HTMLTextAreaElement | null {
   return body.querySelector("#sideai-composer") as HTMLTextAreaElement | null;
 }
@@ -903,6 +912,121 @@ function renderPromptPresetOptions(body: HTMLDivElement): void {
     .join("");
 }
 
+function syncPromptPresetEditor(body: HTMLDivElement): void {
+  const promptPresetLabelInput = getPromptPresetLabelInput(body);
+  const systemPromptInput = getSystemPromptInput(body);
+  const selectedPreset = getSelectedPromptPreset();
+
+  if (promptPresetLabelInput) {
+    promptPresetLabelInput.value = selectedPreset.label;
+  }
+
+  if (systemPromptInput) {
+    systemPromptInput.value = selectedPreset.prompt;
+  }
+}
+
+function savePromptPresetSelection(
+  body: HTMLDivElement,
+  presets: PromptPreset[],
+  selectedId: string
+): PromptPreset | null {
+  savePromptPresets(presets);
+  saveSelectedPromptPresetId(selectedId);
+  renderPromptPresetOptions(body);
+
+  const promptPresetSelect = getPromptPresetSelect(body);
+  const selectedPreset =
+    getSavedPromptPresets().find((preset) => preset.id === selectedId) ||
+    getSelectedPromptPreset();
+
+  if (promptPresetSelect) {
+    promptPresetSelect.value = selectedPreset.id;
+  }
+
+  syncPromptPresetEditor(body);
+  refreshRequestPreview(body);
+  return selectedPreset || null;
+}
+
+function saveSelectedPromptPreset(body: HTMLDivElement): PromptPreset | null {
+  const promptPresetSelect = getPromptPresetSelect(body);
+  const promptPresetLabelInput = getPromptPresetLabelInput(body);
+  const systemPromptInput = getSystemPromptInput(body);
+
+  if (!promptPresetSelect || !promptPresetLabelInput || !systemPromptInput) {
+    return null;
+  }
+
+  const selectedId = promptPresetSelect.value;
+  const nextPresets = updatePromptPreset(getSavedPromptPresets(), selectedId, {
+    label: promptPresetLabelInput.value,
+    prompt: systemPromptInput.value
+  });
+  const savedPreset =
+    nextPresets.find((preset) => preset.id === selectedId) ||
+    nextPresets[nextPresets.length - 1];
+
+  if (!savedPreset) {
+    return null;
+  }
+
+  return savePromptPresetSelection(body, nextPresets, savedPreset.id);
+}
+
+function createPromptPresetFromEditor(body: HTMLDivElement): PromptPreset | null {
+  const promptPresetLabelInput = getPromptPresetLabelInput(body);
+  const systemPromptInput = getSystemPromptInput(body);
+
+  if (!promptPresetLabelInput || !systemPromptInput) {
+    return null;
+  }
+
+  const nextPresets = addPromptPreset(
+    getSavedPromptPresets(),
+    promptPresetLabelInput.value,
+    systemPromptInput.value
+  );
+  const createdPreset = nextPresets[nextPresets.length - 1];
+
+  if (!createdPreset) {
+    return null;
+  }
+
+  return savePromptPresetSelection(body, nextPresets, createdPreset.id);
+}
+
+function removeSelectedPromptPreset(body: HTMLDivElement): PromptPreset | null {
+  const promptPresetSelect = getPromptPresetSelect(body);
+  const presets = getSavedPromptPresets();
+
+  if (!promptPresetSelect) {
+    return null;
+  }
+
+  if (presets.length <= 1) {
+    setConfigFeedback(
+      body,
+      "Keep at least one prompt preset available before deleting.",
+      "error"
+    );
+    setActionStatus(body, "At least one prompt preset must remain.");
+    return null;
+  }
+
+  const selectedId = promptPresetSelect.value;
+  const selectedIndex = presets.findIndex((preset) => preset.id === selectedId);
+  const nextPresets = deletePromptPreset(presets, selectedId);
+  const fallbackPreset =
+    nextPresets[Math.max(0, selectedIndex - 1)] || nextPresets[0] || null;
+
+  if (!fallbackPreset) {
+    return null;
+  }
+
+  return savePromptPresetSelection(body, nextPresets, fallbackPreset.id);
+}
+
 function setConfigFeedback(
   body: HTMLDivElement,
   message: string,
@@ -922,10 +1046,8 @@ function setConfigFeedback(
 function syncSavedSettings(body: HTMLDivElement): void {
   const baseUrlInput = getBaseUrlInput(body);
   const modelInput = getModelInput(body);
-  const systemPromptInput = getSystemPromptInput(body);
   const apiKeyInput = getApiKeyInput(body);
   const promptPresetSelect = getPromptPresetSelect(body);
-  const selectedPreset = getSelectedPromptPreset();
 
   if (baseUrlInput) {
     baseUrlInput.value = getSavedBaseUrl();
@@ -935,23 +1057,21 @@ function syncSavedSettings(body: HTMLDivElement): void {
     modelInput.value = getSavedModel();
   }
 
-  if (systemPromptInput) {
-    systemPromptInput.value = selectedPreset.prompt;
-  }
-
   if (!apiKeyInput) {
     renderPromptPresetOptions(body);
     if (promptPresetSelect) {
-      promptPresetSelect.value = selectedPreset.id;
+      promptPresetSelect.value = getSelectedPromptPreset().id;
     }
+    syncPromptPresetEditor(body);
     return;
   }
 
   apiKeyInput.value = getSavedApiKey();
   renderPromptPresetOptions(body);
   if (promptPresetSelect) {
-    promptPresetSelect.value = selectedPreset.id;
+    promptPresetSelect.value = getSelectedPromptPreset().id;
   }
+  syncPromptPresetEditor(body);
 }
 
 function persistSettings(body: HTMLDivElement): void {
@@ -972,19 +1092,11 @@ function persistSettings(body: HTMLDivElement): void {
   }
 
   try {
-    const presets = getSavedPromptPresets();
-    const selectedId = promptPresetSelect.value;
-    const nextPresets: PromptPreset[] = presets.map((preset) =>
-      preset.id === selectedId
-        ? { ...preset, prompt: systemPromptInput.value.trim() || preset.prompt }
-        : preset
-    );
+    const savedPreset = saveSelectedPromptPreset(body);
 
     saveBaseUrl(baseUrlInput.value);
     saveModel(modelInput.value);
-    saveSystemPrompt(systemPromptInput.value);
-    savePromptPresets(nextPresets);
-    saveSelectedPromptPresetId(selectedId);
+    saveSystemPrompt(savedPreset?.prompt || systemPromptInput.value);
     saveApiKey(apiKeyInput.value);
     const message = getConfigSuccessMessage("save");
     setConfigFeedback(body, message, "success");
@@ -1329,11 +1441,25 @@ export function registerSideAIPane(): false | string {
                 ></html:select>
               </html:div>
               <html:div class="sideai-config-row">
+                <html:label class="sideai-config-label" for="sideai-prompt-preset-label">Preset Name</html:label>
+                <html:input
+                  id="sideai-prompt-preset-label"
+                  class="sideai-config-input"
+                  type="text"
+                  value=""
+                />
+              </html:div>
+              <html:div class="sideai-config-row">
                 <html:label class="sideai-config-label" for="sideai-system-prompt">Fixed Prompt</html:label>
                 <html:textarea
                   id="sideai-system-prompt"
                   class="sideai-config-textarea"
                 >${getDefaultSystemPrompt()}</html:textarea>
+              </html:div>
+              <html:div class="sideai-pane-actions">
+                <html:button data-sideai-role="new-preset-button">New Preset</html:button>
+                <html:button data-sideai-role="save-preset-button">Save Preset</html:button>
+                <html:button data-sideai-role="delete-preset-button">Delete Preset</html:button>
               </html:div>
               <html:div class="sideai-pane-actions">
                 <html:button data-sideai-role="save-settings-button">Save Settings</html:button>
@@ -1403,6 +1529,15 @@ export function registerSideAIPane(): false | string {
       const saveButton = body.querySelector(
         "[data-sideai-role='save-settings-button']"
       ) as HTMLButtonElement | null;
+      const savePresetButton = body.querySelector(
+        "[data-sideai-role='save-preset-button']"
+      ) as HTMLButtonElement | null;
+      const newPresetButton = body.querySelector(
+        "[data-sideai-role='new-preset-button']"
+      ) as HTMLButtonElement | null;
+      const deletePresetButton = body.querySelector(
+        "[data-sideai-role='delete-preset-button']"
+      ) as HTMLButtonElement | null;
       const resetButton = body.querySelector(
         "[data-sideai-role='reset-settings-button']"
       ) as HTMLButtonElement | null;
@@ -1431,6 +1566,42 @@ export function registerSideAIPane(): false | string {
         persistSettings(body);
       });
 
+      savePresetButton?.addEventListener("click", () => {
+        const preset = saveSelectedPromptPreset(body);
+
+        if (!preset) {
+          return;
+        }
+
+        const message = `Prompt preset "${preset.label}" saved.`;
+        setConfigFeedback(body, message, "success");
+        setActionStatus(body, message);
+      });
+
+      newPresetButton?.addEventListener("click", () => {
+        const preset = createPromptPresetFromEditor(body);
+
+        if (!preset) {
+          return;
+        }
+
+        const message = `Prompt preset "${preset.label}" created.`;
+        setConfigFeedback(body, message, "success");
+        setActionStatus(body, message);
+      });
+
+      deletePresetButton?.addEventListener("click", () => {
+        const preset = removeSelectedPromptPreset(body);
+
+        if (!preset) {
+          return;
+        }
+
+        const message = `Prompt preset deleted. Switched to "${preset.label}".`;
+        setConfigFeedback(body, message, "success");
+        setActionStatus(body, message);
+      });
+
       resetButton?.addEventListener("click", () => {
         restoreDefaultSettings(body);
       });
@@ -1453,6 +1624,7 @@ export function registerSideAIPane(): false | string {
           systemPromptInput.value = selectedPreset.prompt;
         }
         saveSelectedPromptPresetId(promptPresetSelect.value);
+        syncPromptPresetEditor(body);
         refreshRequestPreview(body);
       });
 

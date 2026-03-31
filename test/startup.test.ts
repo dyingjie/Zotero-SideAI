@@ -12,12 +12,15 @@ import {
   saveModel
 } from "../src/settings/model";
 import {
+  addPromptPreset,
+  deletePromptPreset,
   getDefaultPromptPresets,
   getSavedPromptPresets,
   getSelectedPromptPreset,
   getSelectedPromptPresetId,
   savePromptPresets,
-  saveSelectedPromptPresetId
+  saveSelectedPromptPresetId,
+  updatePromptPreset
 } from "../src/settings/prompt-presets";
 import {
   getDefaultSystemPrompt,
@@ -177,6 +180,42 @@ describe("startup", function () {
 
     Zotero.Prefs.clear(presetsPrefKey, true);
     Zotero.Prefs.clear(selectedPrefKey, true);
+  });
+
+  it("should add, update, and delete prompt presets safely", function () {
+    const presets = getDefaultPromptPresets();
+    const appendedPresets = addPromptPreset(
+      presets,
+      "Deep Dive",
+      "Explain the paper in detail."
+    );
+
+    assert.lengthOf(appendedPresets, presets.length + 1);
+    assert.strictEqual(
+      appendedPresets[appendedPresets.length - 1].id,
+      "deep-dive"
+    );
+
+    const updatedPresets = updatePromptPreset(
+      appendedPresets,
+      "deep-dive",
+      {
+        label: "Methods Focus",
+        prompt: "Focus on methods only."
+      }
+    );
+    const updatedPreset = updatedPresets.find(
+      (preset) => preset.id === "methods-focus"
+    );
+    assert.isDefined(updatedPreset);
+    assert.strictEqual(updatedPreset?.label, "Methods Focus");
+    assert.strictEqual(updatedPreset?.prompt, "Focus on methods only.");
+
+    const deletedPresets = deletePromptPreset(updatedPresets, "methods-focus");
+    assert.lengthOf(deletedPresets, presets.length);
+    assert.isUndefined(
+      deletedPresets.find((preset) => preset.id === "methods-focus")
+    );
   });
 
   it("should restore settings to defaults", function () {
