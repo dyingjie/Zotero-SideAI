@@ -27,7 +27,10 @@ import {
   getSavedSystemPrompt,
   saveSystemPrompt
 } from "../src/settings/system-prompt";
-import { resetSettingsToDefaults } from "../src/settings/reset";
+import {
+  resetPromptPresetsToDefaults,
+  resetSettingsToDefaults
+} from "../src/settings/reset";
 import {
   getConfigFailureMessage,
   getConfigSuccessMessage
@@ -230,6 +233,38 @@ describe("startup", function () {
     assert.strictEqual(getSavedBaseUrl(), getDefaultBaseUrl());
     assert.strictEqual(getSavedModel(), getDefaultModel());
     assert.strictEqual(getSavedSystemPrompt(), getDefaultSystemPrompt());
+  });
+
+  it("should restore prompt presets to defaults independently", function () {
+    const presetsPrefKey = `${config.prefsPrefix}.promptPresets`;
+    const selectedPrefKey = `${config.prefsPrefix}.selectedPromptPreset`;
+
+    const customPresets = [
+      {
+        id: "custom",
+        label: "Custom",
+        prompt: "Custom prompt"
+      }
+    ];
+
+    savePromptPresets(customPresets);
+    saveSelectedPromptPresetId("custom");
+    saveSystemPrompt("Custom prompt");
+
+    resetPromptPresetsToDefaults();
+
+    assert.deepEqual(getSavedPromptPresets(), getDefaultPromptPresets());
+    assert.strictEqual(
+      getSelectedPromptPresetId(),
+      getDefaultPromptPresets()[0].id
+    );
+    assert.strictEqual(
+      getSavedSystemPrompt(),
+      getDefaultPromptPresets()[0].prompt
+    );
+
+    Zotero.Prefs.clear(presetsPrefKey, true);
+    Zotero.Prefs.clear(selectedPrefKey, true);
   });
 
   it("should build config feedback messages for save failures", function () {

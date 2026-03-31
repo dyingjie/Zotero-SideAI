@@ -21,7 +21,10 @@ import {
   getSavedSystemPrompt,
   saveSystemPrompt
 } from "../settings/system-prompt";
-import { resetSettingsToDefaults } from "../settings/reset";
+import {
+  resetPromptPresetsToDefaults,
+  resetSettingsToDefaults
+} from "../settings/reset";
 import {
   type ConfigFeedbackTone,
   getConfigFailureMessage,
@@ -1132,6 +1135,27 @@ function restoreDefaultSettings(body: HTMLDivElement): void {
   }
 }
 
+function restoreDefaultPromptPresets(body: HTMLDivElement): void {
+  try {
+    resetPromptPresetsToDefaults();
+    renderPromptPresetOptions(body);
+    syncPromptPresetEditor(body);
+    refreshRequestPreview(body);
+    const message = "Default prompt presets restored.";
+    setConfigFeedback(body, message, "success");
+    setActionStatus(body, message);
+  } catch (error) {
+    Zotero.logError(
+      error instanceof Error
+        ? error
+        : new Error("Unable to restore default prompt presets.")
+    );
+    const message = "Unable to restore default prompt presets right now.";
+    setConfigFeedback(body, message, "error");
+    setActionStatus(body, message);
+  }
+}
+
 function renderPane(body: HTMLDivElement, item?: Zotero.Item): void {
   applyPaneLayout(body);
 
@@ -1460,6 +1484,7 @@ export function registerSideAIPane(): false | string {
                 <html:button data-sideai-role="new-preset-button">New Preset</html:button>
                 <html:button data-sideai-role="save-preset-button">Save Preset</html:button>
                 <html:button data-sideai-role="delete-preset-button">Delete Preset</html:button>
+                <html:button data-sideai-role="reset-presets-button">Reset Presets</html:button>
               </html:div>
               <html:div class="sideai-pane-actions">
                 <html:button data-sideai-role="save-settings-button">Save Settings</html:button>
@@ -1538,6 +1563,9 @@ export function registerSideAIPane(): false | string {
       const deletePresetButton = body.querySelector(
         "[data-sideai-role='delete-preset-button']"
       ) as HTMLButtonElement | null;
+      const resetPresetsButton = body.querySelector(
+        "[data-sideai-role='reset-presets-button']"
+      ) as HTMLButtonElement | null;
       const resetButton = body.querySelector(
         "[data-sideai-role='reset-settings-button']"
       ) as HTMLButtonElement | null;
@@ -1600,6 +1628,10 @@ export function registerSideAIPane(): false | string {
         const message = `Prompt preset deleted. Switched to "${preset.label}".`;
         setConfigFeedback(body, message, "success");
         setActionStatus(body, message);
+      });
+
+      resetPresetsButton?.addEventListener("click", () => {
+        restoreDefaultPromptPresets(body);
       });
 
       resetButton?.addEventListener("click", () => {
