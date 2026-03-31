@@ -409,6 +409,24 @@ describe("startup", function () {
     );
   });
 
+  it("should use active composer text as task instruction when provided", function () {
+    const messages = buildPreviewMessages({
+      context: {
+        abstractText: "Abstract body",
+        notesText: "Note body",
+        previewText: "Title:\nPaper title",
+        title: "Paper title"
+      },
+      systemPromptTemplate: "Summarize {{title}}.",
+      taskInstruction: "Answer in Chinese and focus on methods."
+    });
+
+    assert.strictEqual(
+      messages[1].content,
+      "Answer in Chinese and focus on methods.\n\nTitle:\nPaper title"
+    );
+  });
+
   it("should encapsulate chat completion request sending", async function () {
     let capturedUrl = "";
     let capturedOptions: RequestInit | undefined;

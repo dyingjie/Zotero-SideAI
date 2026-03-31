@@ -639,6 +639,16 @@ function getSystemPromptInput(body: HTMLDivElement): HTMLTextAreaElement | null 
   return body.querySelector("#sideai-system-prompt") as HTMLTextAreaElement | null;
 }
 
+function getComposerInput(body: HTMLDivElement): HTMLTextAreaElement | null {
+  return body.querySelector("#sideai-composer") as HTMLTextAreaElement | null;
+}
+
+function getTaskInstruction(body: HTMLDivElement): string | undefined {
+  const composerInput = getComposerInput(body);
+  const value = composerInput?.value?.trim() || "";
+  return value || undefined;
+}
+
 function setActionStatus(body: HTMLDivElement, message: string): void {
   const actionStatusElement = body.querySelector(
     "[data-sideai-role='action-status']"
@@ -774,6 +784,33 @@ function renderHistoryList(body: HTMLDivElement): void {
     });
 
   applyPaneLayout(body);
+}
+
+function refreshRequestPreview(body: HTMLDivElement): void {
+  const requestPreviewElement = body.querySelector(
+    "[data-sideai-role='request-preview']"
+  ) as HTMLDivElement | null;
+  const currentTextContext = paneContextStore.get(body);
+  const systemPromptInput = getSystemPromptInput(body);
+  const taskInstruction = getTaskInstruction(body);
+
+  if (!requestPreviewElement) {
+    return;
+  }
+
+  if (!currentTextContext || currentTextContext.title === "No item selected") {
+    requestPreviewElement.textContent =
+      "Select an item to inspect the final request preview.";
+    return;
+  }
+
+  requestPreviewElement.textContent = formatPreviewMessages(
+    buildPreviewMessages({
+      context: currentTextContext,
+      systemPromptTemplate: systemPromptInput?.value || getSavedSystemPrompt(),
+      taskInstruction
+    })
+  );
 }
 
 function setConfigFeedback(
@@ -914,14 +951,10 @@ function renderPane(body: HTMLDivElement, item?: Zotero.Item): void {
 
   if (requestPreviewElement) {
     requestPreviewElement.textContent = hasItem
-      ? formatPreviewMessages(
-          buildPreviewMessages({
-            context: currentTextContext,
-            systemPromptTemplate: getSavedSystemPrompt()
-          })
-        )
+      ? ""
       : "Select an item to inspect the final request preview.";
   }
+  refreshRequestPreview(body);
 
   if (outputPreviewElement) {
     outputPreviewElement.textContent = hasItem ? OUTPUT_PLACEHOLDER : "No output yet.";
@@ -1013,7 +1046,8 @@ async function sendCurrentPreview(body: HTMLDivElement): Promise<void> {
 
   const previewMessages = buildPreviewMessages({
     context: currentTextContext,
-    systemPromptTemplate: systemPromptInput?.value || ""
+    systemPromptTemplate: systemPromptInput?.value || "",
+    taskInstruction: getTaskInstruction(body)
   });
   const latestUserMessage = previewMessages.find((message) => message.role === "user");
 
@@ -1070,6 +1104,11 @@ async function sendCurrentPreview(body: HTMLDivElement): Promise<void> {
     renderHistoryList(body);
 
     setActionStatus(body, "Response received successfully.");
+    const composerInput = getComposerInput(body);
+    if (composerInput) {
+      composerInput.value = "";
+    }
+    refreshRequestPreview(body);
     setPaneState(body, "ready");
   } catch (error) {
     const message =
@@ -1198,6 +1237,14 @@ export function registerSideAIPane(): false | string {
         </html:div>
         <html:div class="sideai-pane-section">
           <html:div class="sideai-pane-label">Actions</html:div>
+          <html:div class="sideai-pane-card">
+            <html:div class="sideai-pane-label">Message</html:div>
+            <html:textarea
+              id="sideai-composer"
+              class="sideai-config-textarea"
+              placeholder="Ask a follow-up question or add extra instructions..."
+            ></html:textarea>
+          </html:div>
           <html:div class="sideai-pane-actions">
             <html:button data-sideai-role="send-button" disabled="true">Send</html:button>
             <html:button data-sideai-role="copy-button" disabled="true">Copy</html:button>
@@ -1225,8 +1272,11 @@ export function registerSideAIPane(): false | string {
       const clearButton = body.querySelector(
         "[data-sideai-role='clear-button']"
       ) as HTMLButtonElement | null;
+      const composerInput = getComposerInput(body);
+      const systemPromptInput = getSystemPromptInput(body);
 
       syncSavedSettings(body);
+      refreshRequestPreview(body);
 
       sendButton?.addEventListener("click", () => {
         void sendCurrentPreview(body);
@@ -1246,6 +1296,21 @@ export function registerSideAIPane(): false | string {
 
       clearButton?.addEventListener("click", () => {
         clearOutput(body);
+      });
+
+      composerInput?.addEventListener("input", () => {
+        refreshRequestPreview(body);
+      });
+
+      composerInput?.addEventListener("keydown", (event: KeyboardEvent) => {
+        if (event.key === "Enter" && !event.shiftKey) {
+          event.preventDefault();
+          void sendCurrentPreview(body);
+        }
+      });
+
+      systemPromptInput?.addEventListener("input", () => {
+        refreshRequestPreview(body);
       });
     },
     onItemChange: ({ item, setEnabled, tabType }) => {
