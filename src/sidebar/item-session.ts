@@ -1,6 +1,4 @@
-import type { SessionHistoryEntry } from "./session-history";
-
-export type ItemSessionMap = Record<string, SessionHistoryEntry[]>;
+export type ItemSessionMap<T> = Record<string, T[]>;
 
 export function getItemSessionKey(item?: Zotero.Item): string | null {
   if (!item || typeof item.id !== "number" || !Number.isFinite(item.id)) {
@@ -10,10 +8,10 @@ export function getItemSessionKey(item?: Zotero.Item): string | null {
   return `item:${item.id}`;
 }
 
-export function getItemSessionHistory(
-  sessions: ItemSessionMap,
+export function getItemSessionHistory<T>(
+  sessions: ItemSessionMap<T>,
   sessionKey: string | null
-): SessionHistoryEntry[] {
+): T[] {
   if (!sessionKey) {
     return [];
   }
@@ -21,11 +19,11 @@ export function getItemSessionHistory(
   return sessions[sessionKey] || [];
 }
 
-export function setItemSessionHistory(
-  sessions: ItemSessionMap,
+export function setItemSessionHistory<T>(
+  sessions: ItemSessionMap<T>,
   sessionKey: string | null,
-  history: SessionHistoryEntry[]
-): ItemSessionMap {
+  history: T[]
+): ItemSessionMap<T> {
   if (!sessionKey) {
     return sessions;
   }

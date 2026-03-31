@@ -32,6 +32,12 @@ import {
   type CurrentTextContext,
   mergeNotePreviewTexts
 } from "./context-preview";
+import {
+  appendChatMessage,
+  buildChatMessageEntry,
+  removeLoadingChatMessages,
+  type ChatMessageEntry
+} from "./chat-stream";
 import { renderMarkdownPreviewHtml } from "./output-render";
 import {
   getItemSessionHistory,
@@ -58,16 +64,32 @@ const OUTPUT_PLACEHOLDER =
 
 let registeredPaneKey: false | string = false;
 const paneContextStore = new WeakMap<HTMLDivElement, CurrentTextContext>();
-const paneSessionStore = new WeakMap<HTMLDivElement, ItemSessionMap>();
+const paneSessionStore = new WeakMap<HTMLDivElement, ItemSessionMap<SessionHistoryEntry>>();
+const paneChatStore = new WeakMap<HTMLDivElement, ItemSessionMap<ChatMessageEntry>>();
 const paneActiveSessionKeyStore = new WeakMap<HTMLDivElement, string | null>();
 
-function getSessionMap(body: HTMLDivElement): ItemSessionMap {
+function getSessionMap(
+  body: HTMLDivElement
+): ItemSessionMap<SessionHistoryEntry> {
   return paneSessionStore.get(body) || {};
 }
 
 function getSessionHistory(body: HTMLDivElement): SessionHistoryEntry[] {
   return getItemSessionHistory(
     getSessionMap(body),
+    paneActiveSessionKeyStore.get(body) || null
+  );
+}
+
+function getChatSessionMap(
+  body: HTMLDivElement
+): ItemSessionMap<ChatMessageEntry> {
+  return paneChatStore.get(body) || {};
+}
+
+function getChatMessages(body: HTMLDivElement): ChatMessageEntry[] {
+  return getItemSessionHistory(
+    getChatSessionMap(body),
     paneActiveSessionKeyStore.get(body) || null
   );
 }
@@ -86,6 +108,29 @@ function pushSessionHistory(
     )
   );
   return nextHistory;
+}
+
+function setChatMessages(
+  body: HTMLDivElement,
+  messages: ChatMessageEntry[]
+): ChatMessageEntry[] {
+  paneChatStore.set(
+    body,
+    setItemSessionHistory(
+      getChatSessionMap(body),
+      paneActiveSessionKeyStore.get(body) || null,
+      messages
+    )
+  );
+
+  return messages;
+}
+
+function pushChatMessage(
+  body: HTMLDivElement,
+  entry: ChatMessageEntry
+): ChatMessageEntry[] {
+  return setChatMessages(body, appendChatMessage(getChatMessages(body), entry));
 }
 
 function applyPaneLayout(body: HTMLDivElement): void {
@@ -188,6 +233,11 @@ function applyPaneLayout(body: HTMLDivElement): void {
   const numberTokens = body.querySelectorAll(".sideai-token-number");
   const propertyTokens = body.querySelectorAll(".sideai-token-property");
   const stringTokens = body.querySelectorAll(".sideai-token-string");
+  const chatStream = body.querySelector(
+    "[data-sideai-role='chat-stream']"
+  ) as HTMLDivElement | null;
+  const chatMessages = body.querySelectorAll(".sideai-chat-message");
+  const chatRoles = body.querySelectorAll(".sideai-chat-role");
 
   if (contextPreview) {
     contextPreview.style.maxHeight = layoutProfile.contextMaxHeight;
@@ -201,6 +251,41 @@ function applyPaneLayout(body: HTMLDivElement): void {
     outputPreview.style.overflowWrap = "anywhere";
     outputPreview.style.lineHeight = "1.5";
   }
+
+  if (chatStream) {
+    chatStream.style.display = "flex";
+    chatStream.style.flexDirection = "column";
+    chatStream.style.gap = "8px";
+  }
+
+  chatMessages.forEach((message: Element) => {
+    const element = message as HTMLDivElement;
+    const role = element.dataset.sideaiRole || "assistant";
+    const tone = element.dataset.sideaiTone || "default";
+    element.style.display = "flex";
+    element.style.flexDirection = "column";
+    element.style.gap = "4px";
+    element.style.padding = "8px";
+    element.style.borderRadius = "8px";
+    element.style.border = "1px solid var(--fill-tertiary, rgba(0,0,0,0.08))";
+    element.style.background =
+      role === "user"
+        ? "rgba(32, 98, 180, 0.08)"
+        : tone === "error"
+          ? "rgba(208, 64, 64, 0.08)"
+          : tone === "loading"
+            ? "rgba(180, 120, 32, 0.08)"
+            : "var(--fill-quinary, rgba(0,0,0,0.05))";
+  });
+
+  chatRoles.forEach((roleLabel: Element) => {
+    const element = roleLabel as HTMLDivElement;
+    element.style.fontSize = "11px";
+    element.style.fontWeight = "600";
+    element.style.textTransform = "uppercase";
+    element.style.letterSpacing = "0.04em";
+    element.style.color = "var(--text-color-deemphasized, #666)";
+  });
 
   outputParagraphs.forEach((paragraph: Element) => {
     const element = paragraph as HTMLParagraphElement;
@@ -564,6 +649,52 @@ function setActionStatus(body: HTMLDivElement, message: string): void {
   }
 }
 
+function renderChatStream(body: HTMLDivElement): void {
+  const outputPreviewElement = body.querySelector(
+    "[data-sideai-role='output-preview']"
+  ) as HTMLDivElement | null;
+
+  if (!outputPreviewElement) {
+    return;
+  }
+
+  const messages = getChatMessages(body);
+  if (!messages.length) {
+    outputPreviewElement.textContent = OUTPUT_PLACEHOLDER;
+    applyPaneLayout(body);
+    return;
+  }
+
+  outputPreviewElement.innerHTML = `
+    <div class="sideai-chat-stream" data-sideai-role="chat-stream">
+      ${messages
+        .map((message) => {
+          const renderedContent =
+            message.mode === "markdown" && message.role === "assistant"
+              ? renderMarkdownPreviewHtml(message.content)
+              : `<div class="sideai-pane-muted">${message.content}</div>`;
+
+          return `
+            <div class="sideai-chat-message" data-sideai-role="${message.role}" data-sideai-tone="${message.tone}">
+              <div class="sideai-chat-role">${
+                message.role === "user"
+                  ? "User"
+                  : message.role === "assistant"
+                    ? "Assistant"
+                    : "Status"
+              }</div>
+              <div>${renderedContent}</div>
+            </div>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+
+  outputPreviewElement.scrollTop = outputPreviewElement.scrollHeight;
+  applyPaneLayout(body);
+}
+
 function setOutputPreviewContent(
   body: HTMLDivElement,
   content: string,
@@ -744,6 +875,9 @@ function renderPane(body: HTMLDivElement, item?: Zotero.Item): void {
   if (!paneSessionStore.has(body)) {
     paneSessionStore.set(body, {});
   }
+  if (!paneChatStore.has(body)) {
+    paneChatStore.set(body, {});
+  }
   paneContextStore.set(body, currentTextContext);
   const titleElement = body.querySelector(
     "[data-sideai-role='title']"
@@ -789,22 +923,9 @@ function renderPane(body: HTMLDivElement, item?: Zotero.Item): void {
       : "Select an item to inspect the final request preview.";
   }
 
-  const latestSessionEntry = getSessionHistory(body)[0];
   if (outputPreviewElement) {
-    if (latestSessionEntry) {
-      setOutputPreviewContent(
-        body,
-        latestSessionEntry.content,
-        latestSessionEntry.mode
-      );
-    } else {
-      setOutputPreviewContent(
-        body,
-        hasItem
-          ? OUTPUT_PLACEHOLDER
-          : "No output yet."
-      );
-    }
+    outputPreviewElement.textContent = hasItem ? OUTPUT_PLACEHOLDER : "No output yet.";
+    renderChatStream(body);
   }
   renderHistoryList(body);
 
@@ -841,7 +962,8 @@ function copyOutput(body: HTMLDivElement): void {
 }
 
 function clearOutput(body: HTMLDivElement): void {
-  setOutputPreviewContent(body, OUTPUT_PLACEHOLDER);
+  setChatMessages(body, []);
+  renderChatStream(body);
   setActionStatus(body, "Current item session output cleared.");
   setPaneState(body, "ready");
 }
@@ -889,22 +1011,54 @@ async function sendCurrentPreview(body: HTMLDivElement): Promise<void> {
     return;
   }
 
+  const previewMessages = buildPreviewMessages({
+    context: currentTextContext,
+    systemPromptTemplate: systemPromptInput?.value || ""
+  });
+  const latestUserMessage = previewMessages.find((message) => message.role === "user");
+
+  if (latestUserMessage) {
+    pushChatMessage(
+      body,
+      buildChatMessageEntry({
+        content: latestUserMessage.content,
+        mode: "text",
+        role: "user"
+      })
+    );
+  }
+  pushChatMessage(
+    body,
+    buildChatMessageEntry({
+      content: "Requesting model response...",
+      mode: "text",
+      role: "status",
+      tone: "loading"
+    })
+  );
+
   setPaneState(body, "loading");
-  setOutputPreviewContent(body, "Requesting model response...");
+  renderChatStream(body);
 
   try {
     const responseText = await requestChatCompletionsText({
       apiKey: apiKeyInput?.value || "",
       baseUrl: baseUrlInput?.value || "",
-      messages: buildPreviewMessages({
-        context: currentTextContext,
-        systemPromptTemplate: systemPromptInput?.value || ""
-      }),
+      messages: previewMessages,
       model: modelInput?.value || "",
       timeoutMs: 30000
     });
 
-    setOutputPreviewContent(body, responseText, "markdown");
+    setChatMessages(body, removeLoadingChatMessages(getChatMessages(body)));
+    pushChatMessage(
+      body,
+      buildChatMessageEntry({
+        content: responseText,
+        mode: "markdown",
+        role: "assistant"
+      })
+    );
+    renderChatStream(body);
     pushSessionHistory(
       body,
       buildHistoryEntry({
@@ -923,7 +1077,17 @@ async function sendCurrentPreview(body: HTMLDivElement): Promise<void> {
         ? error.message.trim()
         : "Request failed.";
 
-    setOutputPreviewContent(body, `Request failed.\n\n${message}`);
+    setChatMessages(body, removeLoadingChatMessages(getChatMessages(body)));
+    pushChatMessage(
+      body,
+      buildChatMessageEntry({
+        content: `Request failed.\n\n${message}`,
+        mode: "text",
+        role: "status",
+        tone: "error"
+      })
+    );
+    renderChatStream(body);
     pushSessionHistory(
       body,
       buildHistoryEntry({

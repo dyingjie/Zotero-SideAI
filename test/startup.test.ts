@@ -48,6 +48,11 @@ import {
   MAX_HISTORY_ITEMS
 } from "../src/sidebar/session-history";
 import {
+  appendChatMessage,
+  buildChatMessageEntry,
+  removeLoadingChatMessages
+} from "../src/sidebar/chat-stream";
+import {
   getItemSessionHistory,
   getItemSessionKey,
   setItemSessionHistory
@@ -858,6 +863,42 @@ describe("startup", function () {
       sessionB
     ]);
     assert.deepEqual(getItemSessionHistory(sessions, null), []);
+  });
+
+  it("should build chat stream entries and remove loading placeholders", function () {
+    const userMessage = buildChatMessageEntry({
+      content: "Question body",
+      mode: "text",
+      role: "user"
+    });
+    const loadingMessage = buildChatMessageEntry({
+      content: "Requesting model response...",
+      mode: "text",
+      role: "status",
+      tone: "loading"
+    });
+    const assistantMessage = buildChatMessageEntry({
+      content: "Answer body",
+      mode: "markdown",
+      role: "assistant"
+    });
+
+    const messages = appendChatMessage(
+      appendChatMessage([userMessage], loadingMessage),
+      assistantMessage
+    );
+
+    assert.strictEqual(messages.length, 3);
+    assert.strictEqual(messages[0].role, "user");
+    assert.strictEqual(messages[1].tone, "loading");
+    assert.strictEqual(messages[2].role, "assistant");
+
+    const settledMessages = removeLoadingChatMessages(messages);
+    assert.strictEqual(settledMessages.length, 2);
+    assert.strictEqual(
+      settledMessages.some((message) => message.tone === "loading"),
+      false
+    );
   });
 
   it("should clean plugin instance on shutdown", async function () {
