@@ -768,6 +768,36 @@ describe("startup", function () {
     );
   });
 
+  it("should rebuild final messages when switching prompt preset templates", function () {
+    const context = {
+      abstractText: "Abstract body",
+      contextSource: "item" as const,
+      contextSourceLabel: "Item Context",
+      notesText: "Note body",
+      previewText: "Title:\nPaper title\n\nAbstract:\nAbstract body",
+      title: "Paper title"
+    };
+
+    const summaryMessages = buildPreviewMessages({
+      context,
+      systemPromptTemplate: "Summarize {{title}} in Chinese."
+    });
+    const critiqueMessages = buildPreviewMessages({
+      context,
+      systemPromptTemplate: "Critique {{title}} with focus on {{abstractText}}."
+    });
+
+    assert.strictEqual(
+      summaryMessages[0].content,
+      "Summarize Paper title in Chinese."
+    );
+    assert.strictEqual(
+      critiqueMessages[0].content,
+      "Critique Paper title with focus on Abstract body."
+    );
+    assert.strictEqual(summaryMessages[1].content, critiqueMessages[1].content);
+  });
+
   it("should encapsulate chat completion request sending", async function () {
     let capturedUrl = "";
     let capturedOptions: RequestInit | undefined;
