@@ -667,6 +667,18 @@ function setActionStatus(body: HTMLDivElement, message: string): void {
   }
 }
 
+function scrollChatToLatest(body: HTMLDivElement): void {
+  const outputPreviewElement = body.querySelector(
+    "[data-sideai-role='output-preview']"
+  ) as HTMLDivElement | null;
+
+  if (!outputPreviewElement) {
+    return;
+  }
+
+  outputPreviewElement.scrollTop = outputPreviewElement.scrollHeight;
+}
+
 function renderChatStream(body: HTMLDivElement): void {
   const outputPreviewElement = body.querySelector(
     "[data-sideai-role='output-preview']"
@@ -734,7 +746,7 @@ function renderChatStream(body: HTMLDivElement): void {
       });
     });
 
-  outputPreviewElement.scrollTop = outputPreviewElement.scrollHeight;
+  scrollChatToLatest(body);
   applyPaneLayout(body);
 }
 
@@ -1272,6 +1284,7 @@ export function registerSideAIPane(): false | string {
             <html:div class="sideai-pane-label">Latest Result</html:div>
             <html:div data-sideai-role="output-badge">Idle</html:div>
             <html:div class="sideai-pane-output" data-sideai-role="output-preview"></html:div>
+            <html:button data-sideai-role="jump-latest-button">Jump to Latest</html:button>
           </html:div>
         </html:div>
         <html:div class="sideai-pane-section">
@@ -1317,6 +1330,9 @@ export function registerSideAIPane(): false | string {
       const clearButton = body.querySelector(
         "[data-sideai-role='clear-button']"
       ) as HTMLButtonElement | null;
+      const jumpLatestButton = body.querySelector(
+        "[data-sideai-role='jump-latest-button']"
+      ) as HTMLButtonElement | null;
       const composerInput = getComposerInput(body);
       const systemPromptInput = getSystemPromptInput(body);
 
@@ -1341,6 +1357,11 @@ export function registerSideAIPane(): false | string {
 
       clearButton?.addEventListener("click", () => {
         clearOutput(body);
+      });
+
+      jumpLatestButton?.addEventListener("click", () => {
+        scrollChatToLatest(body);
+        setActionStatus(body, "Jumped to the latest message.");
       });
 
       composerInput?.addEventListener("input", () => {
