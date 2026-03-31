@@ -422,6 +422,43 @@ describe("startup", function () {
     assert.deepEqual(result.warnings, []);
   });
 
+  it("should switch context correctly between library item view and pdf reader view", function () {
+    const parentItem = { id: 11 };
+    const pdfAttachment = {
+      id: 12,
+      parentItemID: 11,
+      isPDFAttachment: () => true
+    };
+
+    const libraryContext = resolvePaneContext({
+      item: parentItem,
+      tabType: "library"
+    });
+    const pdfContext = resolvePaneContext({
+      item: parentItem,
+      readerItem: pdfAttachment,
+      resolveParentItem: (itemID) => (itemID === 11 ? parentItem : undefined),
+      tabType: "reader"
+    });
+    const backToLibraryContext = resolvePaneContext({
+      item: parentItem,
+      tabType: "library"
+    });
+
+    assert.strictEqual(libraryContext.source, "item");
+    assert.strictEqual(libraryContext.sourceLabel, "Item Context");
+    assert.strictEqual(libraryContext.item, parentItem);
+
+    assert.strictEqual(pdfContext.source, "pdf-reader");
+    assert.strictEqual(pdfContext.sourceLabel, "PDF Context");
+    assert.strictEqual(pdfContext.item, parentItem);
+    assert.strictEqual(pdfContext.pdfAttachmentItem, pdfAttachment);
+
+    assert.strictEqual(backToLibraryContext.source, "item");
+    assert.strictEqual(backToLibraryContext.sourceLabel, "Item Context");
+    assert.strictEqual(backToLibraryContext.item, parentItem);
+  });
+
   it("should warn when pdf reader item has no parent library item", function () {
     const pdfAttachment = {
       id: 4,
