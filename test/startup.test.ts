@@ -57,6 +57,10 @@ import {
 } from "../src/sidebar/context-preview";
 import { resolvePaneContext } from "../src/sidebar/pane-context";
 import {
+  getReaderSelectionText,
+  normalizePDFSelectionText
+} from "../src/sidebar/pdf-selection";
+import {
   appendHistoryEntry,
   buildHistoryEntry,
   buildHistorySummary,
@@ -354,6 +358,24 @@ describe("startup", function () {
     assert.strictEqual(result.item, parentItem);
     assert.strictEqual(result.parentItem, parentItem);
     assert.strictEqual(result.pdfAttachmentItem, pdfAttachment);
+  });
+
+  it("should read and normalize current pdf selection text safely", function () {
+    assert.strictEqual(
+      normalizePDFSelectionText("\u00a0 Selected PDF text \n"),
+      "Selected PDF text"
+    );
+    assert.strictEqual(
+      getReaderSelectionText({
+        _iframeWindow: {
+          getSelection: () => ({
+            toString: () => "\u00a0 Selected PDF text \n"
+          })
+        }
+      }),
+      "Selected PDF text"
+    );
+    assert.strictEqual(getReaderSelectionText(), "");
   });
 
   it("should adapt pane layout for narrow Zotero sidebar widths", function () {

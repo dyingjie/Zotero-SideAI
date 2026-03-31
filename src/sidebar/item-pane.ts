@@ -77,6 +77,7 @@ import {
   shouldStartSendRequest
 } from "./pane-state";
 import { resolvePaneContext } from "./pane-context";
+import { getReaderSelectionText } from "./pdf-selection";
 
 const SIDEBAR_PANE_ID = "sideai-panel";
 const OUTPUT_PLACEHOLDER =
@@ -553,6 +554,7 @@ function buildCurrentTextContext(item?: Zotero.Item): CurrentTextContext {
     return {
       abstractText: "",
       notesText: "",
+      pdfSelectionText: "",
       previewText: "No current text available.",
       title: "No item selected"
     };
@@ -582,6 +584,7 @@ function buildCurrentTextContext(item?: Zotero.Item): CurrentTextContext {
   return {
     abstractText: normalizedAbstractText,
     notesText,
+    pdfSelectionText: "",
     previewText: previewText || "Selected item has no previewable text yet.",
     title
   };
@@ -1176,17 +1179,27 @@ function resolveActivePaneItem(
   tabType: string
 ): {
   activeItem?: Zotero.Item;
+  pdfSelectionText: string;
   sourceLabel: string;
 } {
+  const readerAttachmentItem = getReaderAttachmentItem();
   const paneContext = resolvePaneContext({
     item,
-    readerItem: getReaderAttachmentItem(),
+    readerItem: readerAttachmentItem,
     resolveParentItem: (itemID: number) => Zotero.Items.get(itemID) as Zotero.Item,
     tabType
   });
+  const selectedTabID = Zotero.getMainWindow()?.Zotero_Tabs?.selectedID;
+  const reader =
+    tabType === "reader" && selectedTabID
+      ? Zotero.Reader.getByTabID(selectedTabID)
+      : undefined;
 
   return {
     activeItem: paneContext.item as Zotero.Item | undefined,
+    pdfSelectionText: paneContext.source === "pdf-reader"
+      ? getReaderSelectionText(reader)
+      : "",
     sourceLabel: paneContext.sourceLabel
   };
 }
@@ -1200,6 +1213,7 @@ function renderPane(
 
   const paneItem = resolveActivePaneItem(item, tabType);
   const currentTextContext = buildCurrentTextContext(paneItem.activeItem);
+  currentTextContext.pdfSelectionText = paneItem.pdfSelectionText;
   const sessionKey = getItemSessionKey(paneItem.activeItem);
   paneActiveSessionKeyStore.set(body, sessionKey);
   if (!paneSessionStore.has(body)) {
@@ -1321,6 +1335,7 @@ async function sendCurrentPreview(
   const currentTextContext = paneContextStore.get(body) || {
     abstractText: "",
     notesText: "",
+    pdfSelectionText: "",
     previewText: "No current text available.",
     title: "No item selected"
   };
