@@ -1187,6 +1187,77 @@ describe("startup", function () {
     assert.deepEqual(getItemSessionHistory(sessions, null), []);
   });
 
+  it("should isolate chat sessions when switching between Zotero items", function () {
+    const itemA = { id: 101 } as Zotero.Item;
+    const itemB = { id: 202 } as Zotero.Item;
+    const itemAChat = [
+      buildChatMessageEntry({
+        content: "Item A question",
+        mode: "text",
+        role: "user"
+      }),
+      buildChatMessageEntry({
+        content: "Item A answer",
+        mode: "markdown",
+        role: "assistant"
+      })
+    ];
+    const itemBChat = [
+      buildChatMessageEntry({
+        content: "Item B question",
+        mode: "text",
+        role: "user"
+      }),
+      buildChatMessageEntry({
+        content: "Item B answer",
+        mode: "markdown",
+        role: "assistant"
+      })
+    ];
+    const itemAHistory = [
+      buildHistoryEntry({
+        content: "Item A answer",
+        mode: "markdown",
+        status: "success"
+      })
+    ];
+    const itemBHistory = [
+      buildHistoryEntry({
+        content: "Item B answer",
+        mode: "markdown",
+        status: "success"
+      })
+    ];
+
+    let chatSessions = setItemSessionHistory({}, getItemSessionKey(itemA), itemAChat);
+    chatSessions = setItemSessionHistory(
+      chatSessions,
+      getItemSessionKey(itemB),
+      itemBChat
+    );
+    let historySessions = setItemSessionHistory(
+      {},
+      getItemSessionKey(itemA),
+      itemAHistory
+    );
+    historySessions = setItemSessionHistory(
+      historySessions,
+      getItemSessionKey(itemB),
+      itemBHistory
+    );
+
+    assert.deepEqual(getItemSessionHistory(chatSessions, getItemSessionKey(itemA)), itemAChat);
+    assert.deepEqual(getItemSessionHistory(chatSessions, getItemSessionKey(itemB)), itemBChat);
+    assert.deepEqual(
+      getItemSessionHistory(historySessions, getItemSessionKey(itemA)),
+      itemAHistory
+    );
+    assert.deepEqual(
+      getItemSessionHistory(historySessions, getItemSessionKey(itemB)),
+      itemBHistory
+    );
+  });
+
   it("should build chat stream entries and remove loading placeholders", function () {
     const userMessage = buildChatMessageEntry({
       content: "Question body",
