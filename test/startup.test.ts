@@ -12,6 +12,14 @@ import {
   saveModel
 } from "../src/settings/model";
 import {
+  getDefaultPromptPresets,
+  getSavedPromptPresets,
+  getSelectedPromptPreset,
+  getSelectedPromptPresetId,
+  savePromptPresets,
+  saveSelectedPromptPresetId
+} from "../src/settings/prompt-presets";
+import {
   getDefaultSystemPrompt,
   getSavedSystemPrompt,
   saveSystemPrompt
@@ -148,6 +156,27 @@ describe("startup", function () {
     assert.strictEqual(getSavedSystemPrompt(), "Summarize this paper in Chinese.");
 
     Zotero.Prefs.clear(prefKey, true);
+  });
+
+  it("should persist prompt preset list and selected preset in Zotero prefs", function () {
+    const presetsPrefKey = `${config.prefsPrefix}.promptPresets`;
+    const selectedPrefKey = `${config.prefsPrefix}.selectedPromptPreset`;
+
+    Zotero.Prefs.clear(presetsPrefKey, true);
+    Zotero.Prefs.clear(selectedPrefKey, true);
+
+    const presets = getDefaultPromptPresets();
+    presets[0].prompt = "Prompt A";
+    presets[1].prompt = "Prompt B";
+    savePromptPresets(presets);
+    saveSelectedPromptPresetId(presets[1].id);
+
+    assert.strictEqual(getSavedPromptPresets()[1].prompt, "Prompt B");
+    assert.strictEqual(getSelectedPromptPresetId(), presets[1].id);
+    assert.strictEqual(getSelectedPromptPreset().prompt, "Prompt B");
+
+    Zotero.Prefs.clear(presetsPrefKey, true);
+    Zotero.Prefs.clear(selectedPrefKey, true);
   });
 
   it("should restore settings to defaults", function () {

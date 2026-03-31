@@ -6,6 +6,14 @@ import {
 } from "../settings/base-url";
 import { getDefaultModel, getSavedModel, saveModel } from "../settings/model";
 import {
+  getSavedPromptPresets,
+  getSelectedPromptPreset,
+  getSelectedPromptPresetId,
+  savePromptPresets,
+  saveSelectedPromptPresetId,
+  type PromptPreset
+} from "../settings/prompt-presets";
+import {
   getDefaultSystemPrompt,
   getSavedSystemPrompt,
   saveSystemPrompt
@@ -661,6 +669,10 @@ function getSystemPromptInput(body: HTMLDivElement): HTMLTextAreaElement | null 
   return body.querySelector("#sideai-system-prompt") as HTMLTextAreaElement | null;
 }
 
+function getPromptPresetSelect(body: HTMLDivElement): HTMLSelectElement | null {
+  return body.querySelector("#sideai-prompt-preset") as HTMLSelectElement | null;
+}
+
 function getComposerInput(body: HTMLDivElement): HTMLTextAreaElement | null {
   return body.querySelector("#sideai-composer") as HTMLTextAreaElement | null;
 }
@@ -866,10 +878,29 @@ function refreshRequestPreview(body: HTMLDivElement): void {
   requestPreviewElement.textContent = formatPreviewMessages(
     buildPreviewMessages({
       context: currentTextContext,
-      systemPromptTemplate: systemPromptInput?.value || getSavedSystemPrompt(),
+      systemPromptTemplate:
+        systemPromptInput?.value || getSelectedPromptPreset().prompt,
       taskInstruction
     })
   );
+}
+
+function renderPromptPresetOptions(body: HTMLDivElement): void {
+  const presetSelect = getPromptPresetSelect(body);
+  if (!presetSelect) {
+    return;
+  }
+
+  const presets = getSavedPromptPresets();
+  const selectedId = getSelectedPromptPresetId();
+  presetSelect.innerHTML = presets
+    .map(
+      (preset) =>
+        `<option value="${preset.id}"${
+          preset.id === selectedId ? " selected" : ""
+        }>${preset.label}</option>`
+    )
+    .join("");
 }
 
 function setConfigFeedback(
@@ -893,6 +924,8 @@ function syncSavedSettings(body: HTMLDivElement): void {
   const modelInput = getModelInput(body);
   const systemPromptInput = getSystemPromptInput(body);
   const apiKeyInput = getApiKeyInput(body);
+  const promptPresetSelect = getPromptPresetSelect(body);
+  const selectedPreset = getSelectedPromptPreset();
 
   if (baseUrlInput) {
     baseUrlInput.value = getSavedBaseUrl();
@@ -903,14 +936,22 @@ function syncSavedSettings(body: HTMLDivElement): void {
   }
 
   if (systemPromptInput) {
-    systemPromptInput.value = getSavedSystemPrompt();
+    systemPromptInput.value = selectedPreset.prompt;
   }
 
   if (!apiKeyInput) {
+    renderPromptPresetOptions(body);
+    if (promptPresetSelect) {
+      promptPresetSelect.value = selectedPreset.id;
+    }
     return;
   }
 
   apiKeyInput.value = getSavedApiKey();
+  renderPromptPresetOptions(body);
+  if (promptPresetSelect) {
+    promptPresetSelect.value = selectedPreset.id;
+  }
 }
 
 function persistSettings(body: HTMLDivElement): void {
@@ -918,15 +959,32 @@ function persistSettings(body: HTMLDivElement): void {
   const modelInput = getModelInput(body);
   const systemPromptInput = getSystemPromptInput(body);
   const apiKeyInput = getApiKeyInput(body);
+  const promptPresetSelect = getPromptPresetSelect(body);
 
-  if (!baseUrlInput || !modelInput || !systemPromptInput || !apiKeyInput) {
+  if (
+    !baseUrlInput ||
+    !modelInput ||
+    !systemPromptInput ||
+    !apiKeyInput ||
+    !promptPresetSelect
+  ) {
     return;
   }
 
   try {
+    const presets = getSavedPromptPresets();
+    const selectedId = promptPresetSelect.value;
+    const nextPresets: PromptPreset[] = presets.map((preset) =>
+      preset.id === selectedId
+        ? { ...preset, prompt: systemPromptInput.value.trim() || preset.prompt }
+        : preset
+    );
+
     saveBaseUrl(baseUrlInput.value);
     saveModel(modelInput.value);
     saveSystemPrompt(systemPromptInput.value);
+    savePromptPresets(nextPresets);
+    saveSelectedPromptPresetId(selectedId);
     saveApiKey(apiKeyInput.value);
     const message = getConfigSuccessMessage("save");
     setConfigFeedback(body, message, "success");
@@ -1264,6 +1322,13 @@ export function registerSideAIPane(): false | string {
                 />
               </html:div>
               <html:div class="sideai-config-row">
+                <html:label class="sideai-config-label" for="sideai-prompt-preset">Prompt Preset</html:label>
+                <html:select
+                  id="sideai-prompt-preset"
+                  class="sideai-config-input"
+                ></html:select>
+              </html:div>
+              <html:div class="sideai-config-row">
                 <html:label class="sideai-config-label" for="sideai-system-prompt">Fixed Prompt</html:label>
                 <html:textarea
                   id="sideai-system-prompt"
@@ -1347,6 +1412,7 @@ export function registerSideAIPane(): false | string {
       const jumpLatestButton = body.querySelector(
         "[data-sideai-role='jump-latest-button']"
       ) as HTMLButtonElement | null;
+      const promptPresetSelect = getPromptPresetSelect(body);
       const composerInput = getComposerInput(body);
       const systemPromptInput = getSystemPromptInput(body);
 
@@ -1376,6 +1442,18 @@ export function registerSideAIPane(): false | string {
       jumpLatestButton?.addEventListener("click", () => {
         scrollChatToLatest(body);
         setActionStatus(body, "Jumped to the latest message.");
+      });
+
+      promptPresetSelect?.addEventListener("change", () => {
+        const selectedPreset = getSavedPromptPresets().find(
+          (preset) => preset.id === promptPresetSelect.value
+        );
+
+        if (selectedPreset && systemPromptInput) {
+          systemPromptInput.value = selectedPreset.prompt;
+        }
+        saveSelectedPromptPresetId(promptPresetSelect.value);
+        refreshRequestPreview(body);
       });
 
       composerInput?.addEventListener("input", () => {
