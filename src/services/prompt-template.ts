@@ -8,6 +8,7 @@ export function renderPromptTemplate(
     abstractText: context.abstractText,
     currentText: context.previewText,
     notesText: context.notesText,
+    pdfSelectionText: context.pdfSelectionText || "",
     previewText: context.previewText,
     title: context.title
   };

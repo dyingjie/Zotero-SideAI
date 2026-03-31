@@ -578,6 +578,7 @@ function buildCurrentTextContext(item?: Zotero.Item): CurrentTextContext {
   const previewText = buildPreviewTextFromContext({
     abstractText: normalizedAbstractText,
     notesText,
+    pdfSelectionText: "",
     title
   });
 
@@ -1214,6 +1215,12 @@ function renderPane(
   const paneItem = resolveActivePaneItem(item, tabType);
   const currentTextContext = buildCurrentTextContext(paneItem.activeItem);
   currentTextContext.pdfSelectionText = paneItem.pdfSelectionText;
+  currentTextContext.previewText = buildPreviewTextFromContext({
+    abstractText: currentTextContext.abstractText,
+    notesText: currentTextContext.notesText,
+    pdfSelectionText: currentTextContext.pdfSelectionText,
+    title: currentTextContext.title
+  }) || "Selected item has no previewable text yet.";
   const sessionKey = getItemSessionKey(paneItem.activeItem);
   paneActiveSessionKeyStore.set(body, sessionKey);
   if (!paneSessionStore.has(body)) {

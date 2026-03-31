@@ -44,9 +44,14 @@ export function truncatePreviewText(
 export function buildPreviewTextFromContext(context: {
   abstractText: string;
   notesText: string;
+  pdfSelectionText?: string;
   title: string;
 }): string {
   const sections: string[] = [];
+
+  if (context.pdfSelectionText) {
+    sections.push(`PDF Selection:\n${context.pdfSelectionText}`);
+  }
 
   if (context.title && context.title !== "Untitled item") {
     sections.push(`Title:\n${context.title}`);

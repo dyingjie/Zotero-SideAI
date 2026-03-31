@@ -338,6 +338,30 @@ describe("startup", function () {
     assert.strictEqual(mergeNotePreviewTexts(["", "   ", "<p></p>"]), "");
   });
 
+  it("should include pdf selection text in unified preview context", function () {
+    assert.strictEqual(
+      buildPreviewTextFromContext({
+        abstractText: "Abstract body",
+        notesText: "Note body",
+        pdfSelectionText: "Selected sentence",
+        title: "Paper title"
+      }),
+      [
+        "PDF Selection:",
+        "Selected sentence",
+        "",
+        "Title:",
+        "Paper title",
+        "",
+        "Abstract:",
+        "Abstract body",
+        "",
+        "Notes:",
+        "Note body"
+      ].join("\n")
+    );
+  });
+
   it("should recognize pdf reader context and resolve parent item as active context", function () {
     const parentItem = { id: 1 };
     const pdfAttachment = {
@@ -506,6 +530,7 @@ describe("startup", function () {
         {
           abstractText: "Abstract body",
           notesText: "Note body",
+          pdfSelectionText: "Selected sentence",
           previewText: "Unified preview",
           title: "Paper title"
         }
@@ -518,6 +543,17 @@ describe("startup", function () {
         "Unknown: {{missing}}"
       ].join("\n")
     );
+
+    assert.strictEqual(
+      renderPromptTemplate("Selection: {{pdfSelectionText}}", {
+        abstractText: "Abstract body",
+        notesText: "Note body",
+        pdfSelectionText: "Selected sentence",
+        previewText: "Unified preview",
+        title: "Paper title"
+      }),
+      "Selection: Selected sentence"
+    );
   });
 
   it("should build and format final request preview messages", function () {
@@ -525,7 +561,9 @@ describe("startup", function () {
       context: {
         abstractText: "Abstract body",
         notesText: "Note body",
-        previewText: "Title:\nPaper title\n\nAbstract:\nAbstract body",
+        pdfSelectionText: "Selected sentence",
+        previewText:
+          "PDF Selection:\nSelected sentence\n\nTitle:\nPaper title\n\nAbstract:\nAbstract body",
         title: "Paper title"
       },
       systemPromptTemplate: "Summarize {{title}} with {{abstractText}}."
@@ -538,7 +576,7 @@ describe("startup", function () {
       },
       {
         content:
-          "Please analyze the following paper.\n\nTitle:\nPaper title\n\nAbstract:\nAbstract body",
+          "Please analyze the following paper.\n\nPDF Selection:\nSelected sentence\n\nTitle:\nPaper title\n\nAbstract:\nAbstract body",
         role: "user"
       }
     ]);
@@ -551,6 +589,9 @@ describe("startup", function () {
         "",
         "USER:",
         "Please analyze the following paper.",
+        "",
+        "PDF Selection:",
+        "Selected sentence",
         "",
         "Title:",
         "Paper title",
@@ -566,7 +607,8 @@ describe("startup", function () {
       context: {
         abstractText: "Abstract body",
         notesText: "Note body",
-        previewText: "Title:\nPaper title",
+        pdfSelectionText: "Selected sentence",
+        previewText: "PDF Selection:\nSelected sentence\n\nTitle:\nPaper title",
         title: "Paper title"
       },
       systemPromptTemplate: "Summarize {{title}}.",
@@ -575,7 +617,7 @@ describe("startup", function () {
 
     assert.strictEqual(
       messages[1].content,
-      "Answer in Chinese and focus on methods.\n\nTitle:\nPaper title"
+      "Answer in Chinese and focus on methods.\n\nPDF Selection:\nSelected sentence\n\nTitle:\nPaper title"
     );
   });
 
