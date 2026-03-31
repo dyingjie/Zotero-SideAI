@@ -10,6 +10,8 @@ export const TRUNCATED_PREVIEW_SUFFIX = "\n\n[Truncated for sending]";
 
 export type CurrentTextContext = {
   abstractText: string;
+  contextSource?: "item" | "pdf-reader";
+  contextSourceLabel?: string;
   notesText: string;
   pdfSelectionText?: string;
   previewText: string;

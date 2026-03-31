@@ -553,6 +553,8 @@ function buildCurrentTextContext(item?: Zotero.Item): CurrentTextContext {
   if (!item) {
     return {
       abstractText: "",
+      contextSource: "item",
+      contextSourceLabel: "Item Context",
       notesText: "",
       pdfSelectionText: "",
       previewText: "No current text available.",
@@ -584,6 +586,8 @@ function buildCurrentTextContext(item?: Zotero.Item): CurrentTextContext {
 
   return {
     abstractText: normalizedAbstractText,
+    contextSource: "item",
+    contextSourceLabel: "Item Context",
     notesText,
     pdfSelectionText: "",
     previewText: previewText || "Selected item has no previewable text yet.",
@@ -1180,6 +1184,7 @@ function resolveActivePaneItem(
   tabType: string
 ): {
   activeItem?: Zotero.Item;
+  contextSource: "item" | "pdf-reader";
   pdfSelectionText: string;
   sourceLabel: string;
 } {
@@ -1198,6 +1203,7 @@ function resolveActivePaneItem(
 
   return {
     activeItem: paneContext.item as Zotero.Item | undefined,
+    contextSource: paneContext.source,
     pdfSelectionText: paneContext.source === "pdf-reader"
       ? getReaderSelectionText(reader)
       : "",
@@ -1214,6 +1220,8 @@ function renderPane(
 
   const paneItem = resolveActivePaneItem(item, tabType);
   const currentTextContext = buildCurrentTextContext(paneItem.activeItem);
+  currentTextContext.contextSource = paneItem.contextSource;
+  currentTextContext.contextSourceLabel = paneItem.sourceLabel;
   currentTextContext.pdfSelectionText = paneItem.pdfSelectionText;
   currentTextContext.previewText = buildPreviewTextFromContext({
     abstractText: currentTextContext.abstractText,
@@ -1341,6 +1349,8 @@ async function sendCurrentPreview(
   ) as HTMLDivElement | null;
   const currentTextContext = paneContextStore.get(body) || {
     abstractText: "",
+    contextSource: "item",
+    contextSourceLabel: "Item Context",
     notesText: "",
     pdfSelectionText: "",
     previewText: "No current text available.",

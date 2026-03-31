@@ -405,6 +405,21 @@ describe("startup", function () {
     assert.strictEqual(result.pdfAttachmentItem, pdfAttachment);
   });
 
+  it("should keep library item context separate from pdf reader context", function () {
+    const regularItem = { id: 3 };
+
+    const result = resolvePaneContext({
+      item: regularItem,
+      tabType: "library"
+    });
+
+    assert.strictEqual(result.source, "item");
+    assert.strictEqual(result.sourceLabel, "Item Context");
+    assert.strictEqual(result.item, regularItem);
+    assert.isUndefined(result.parentItem);
+    assert.isUndefined(result.pdfAttachmentItem);
+  });
+
   it("should read and normalize current pdf selection text safely", function () {
     assert.strictEqual(
       normalizePDFSelectionText("\u00a0 Selected PDF text \n"),
@@ -550,6 +565,8 @@ describe("startup", function () {
         ].join("\n"),
         {
           abstractText: "Abstract body",
+          contextSource: "pdf-reader",
+          contextSourceLabel: "PDF Context",
           notesText: "Note body",
           pdfSelectionText: "Selected sentence",
           previewText: "Unified preview",
@@ -568,6 +585,8 @@ describe("startup", function () {
     assert.strictEqual(
       renderPromptTemplate("Selection: {{pdfSelectionText}}", {
         abstractText: "Abstract body",
+        contextSource: "pdf-reader",
+        contextSourceLabel: "PDF Context",
         notesText: "Note body",
         pdfSelectionText: "Selected sentence",
         previewText: "Unified preview",
@@ -575,12 +594,27 @@ describe("startup", function () {
       }),
       "Selection: Selected sentence"
     );
+
+    assert.strictEqual(
+      renderPromptTemplate("Source: {{contextSourceLabel}}", {
+        abstractText: "Abstract body",
+        contextSource: "pdf-reader",
+        contextSourceLabel: "PDF Context",
+        notesText: "Note body",
+        pdfSelectionText: "Selected sentence",
+        previewText: "Unified preview",
+        title: "Paper title"
+      }),
+      "Source: PDF Context"
+    );
   });
 
   it("should build and format final request preview messages", function () {
     const messages = buildPreviewMessages({
       context: {
         abstractText: "Abstract body",
+        contextSource: "pdf-reader",
+        contextSourceLabel: "PDF Context",
         notesText: "Note body",
         pdfSelectionText: "Selected sentence",
         previewText:
@@ -627,6 +661,8 @@ describe("startup", function () {
     const messages = buildPreviewMessages({
       context: {
         abstractText: "Abstract body",
+        contextSource: "pdf-reader",
+        contextSourceLabel: "PDF Context",
         notesText: "Note body",
         pdfSelectionText: "Selected sentence",
         previewText: "PDF Selection:\nSelected sentence\n\nTitle:\nPaper title",
