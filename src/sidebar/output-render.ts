@@ -1,3 +1,6 @@
+import MarkdownIt from "markdown-it";
+import katex from "katex";
+
 export type OutputBlock =
   | {
       text: string;
@@ -130,25 +133,6 @@ export function escapeHtml(text: string): string {
     .replace(/>/g, "&gt;");
 }
 
-function renderInlineMarkdown(text: string): string {
-  let html = escapeHtml(text);
-
-  html = html.replace(
-    /`([^`]+)`/g,
-    '<code class="sideai-output-inline-code">$1</code>'
-  );
-  html = html.replace(
-    /\*\*([^*]+)\*\*/g,
-    "<strong>$1</strong>"
-  );
-  html = html.replace(
-    /(^|[^*])\*([^*\n]+)\*(?!\*)/g,
-    "$1<em>$2</em>"
-  );
-
-  return html;
-}
-
 function normalizeLanguage(language: string): string {
   const normalized = language.trim().toLowerCase();
   return LANGUAGE_ALIASES[normalized] || normalized;
@@ -273,65 +257,188 @@ export function parseMarkdownBlocks(markdown: string): OutputBlock[] {
   return blocks;
 }
 
-function renderParagraphBlock(text: string): string {
-  const trimmed = text.trim();
-  if (!trimmed) {
-    return "";
+function renderMathFormula(latex: string, displayMode: boolean): string {
+  try {
+    const math = katex.renderToString(latex, {
+      displayMode,
+      output: "mathml",
+      strict: "ignore",
+      throwOnError: false
+    });
+    return displayMode
+      ? `<div class="sideai-output-math-block">${math}</div>`
+      : `<span class="sideai-output-math-inline">${math}</span>`;
+  } catch {
+    return displayMode
+      ? `<div class="sideai-output-math-block">${escapeHtml(latex)}</div>`
+      : `<span class="sideai-output-math-inline">${escapeHtml(latex)}</span>`;
   }
-
-  const headingMatch = trimmed.match(/^(#{1,6})\s+(.+)$/);
-  if (headingMatch) {
-    const level = Math.min(6, headingMatch[1].length);
-    return `<h${level} class="sideai-output-heading sideai-output-heading-${level}">${renderInlineMarkdown(
-      headingMatch[2]
-    )}</h${level}>`;
-  }
-
-  const lines = trimmed.split("\n").map((line) => line.trim()).filter(Boolean);
-  if (
-    lines.length > 0 &&
-    lines.every((line) => /^([-*+])\s+/.test(line))
-  ) {
-    return `<ul class="sideai-output-list">${lines
-      .map((line) => line.replace(/^[-*+]\s+/, ""))
-      .map((line) => `<li>${renderInlineMarkdown(line)}</li>`)
-      .join("")}</ul>`;
-  }
-
-  if (
-    lines.length > 0 &&
-    lines.every((line) => /^\d+\.\s+/.test(line))
-  ) {
-    return `<ol class="sideai-output-list">${lines
-      .map((line) => line.replace(/^\d+\.\s+/, ""))
-      .map((line) => `<li>${renderInlineMarkdown(line)}</li>`)
-      .join("")}</ol>`;
-  }
-
-  return `<p class="sideai-output-paragraph">${trimmed
-    .split("\n")
-    .map((line) => renderInlineMarkdown(line))
-    .join("<br />")}</p>`;
 }
 
-export function renderMarkdownPreviewHtml(markdown: string): string {
-  return parseMarkdownBlocks(markdown)
-    .map((block) => {
-      if (block.type === "code") {
-        const normalizedLanguage = normalizeLanguage(block.language);
-        const languageLabel = block.language
-          ? ` data-language="${escapeHtml(normalizedLanguage)}"`
-          : "";
-        const languageBadge = normalizedLanguage
-          ? `<div class="sideai-output-code-header">${escapeHtml(
-              normalizedLanguage
-            )}</div>`
-          : "";
-
-        return `<pre class="sideai-output-code">${languageBadge}<code${languageLabel}>${highlightCode(normalizedLanguage, block.text)}</code></pre>`;
+function createMathPlugin() {
+  return (markdown: MarkdownIt): void => {
+    markdown.inline.ruler.after("escape", "sideai_math_inline", (state, silent) => {
+      if (state.src.charCodeAt(state.pos) !== 0x24) {
+        return false;
       }
 
-      return renderParagraphBlock(block.text);
-    })
-    .join("");
+      if (state.src.charCodeAt(state.pos + 1) === 0x24) {
+        return false;
+      }
+
+      let start = state.pos + 1;
+      let end = start;
+
+      while ((end = state.src.indexOf("$", end)) !== -1) {
+        if (state.src.charCodeAt(end - 1) === 0x5c) {
+          end += 1;
+          continue;
+        }
+
+        if (end === start || state.src.charCodeAt(end + 1) === 0x24) {
+          end += 1;
+          continue;
+        }
+
+        if (!silent) {
+          const token = state.push("math_inline", "math", 0);
+          token.content = state.src.slice(start, end);
+        }
+
+        state.pos = end + 1;
+        return true;
+      }
+
+      return false;
+    });
+
+    markdown.block.ruler.after(
+      "blockquote",
+      "sideai_math_block",
+      (state, startLine, endLine, silent) => {
+        const start = state.bMarks[startLine] + state.tShift[startLine];
+        const max = state.eMarks[startLine];
+
+        if (state.src.slice(start, max).trim() !== "$$") {
+          return false;
+        }
+
+        let nextLine = startLine + 1;
+        let found = false;
+
+        while (nextLine < endLine) {
+          const lineStart = state.bMarks[nextLine] + state.tShift[nextLine];
+          const lineEnd = state.eMarks[nextLine];
+
+          if (state.src.slice(lineStart, lineEnd).trim() === "$$") {
+            found = true;
+            break;
+          }
+
+          nextLine += 1;
+        }
+
+        if (!found) {
+          return false;
+        }
+
+        if (silent) {
+          return true;
+        }
+
+        const token = state.push("math_block", "math", 0);
+        const contentStart = state.bMarks[startLine + 1] + state.tShift[startLine + 1];
+        const contentEnd = state.eMarks[nextLine - 1];
+        token.block = true;
+        token.content =
+          nextLine === startLine + 1
+            ? ""
+            : state.src.slice(contentStart, contentEnd).replace(/\n$/, "");
+        token.map = [startLine, nextLine + 1];
+        state.line = nextLine + 1;
+        return true;
+      },
+      {
+        alt: ["paragraph", "reference", "blockquote", "list"]
+      }
+    );
+  };
+}
+
+const markdownRenderer = new MarkdownIt({
+  breaks: true,
+  highlight: (code: string, language: string) => {
+    const normalizedLanguage = normalizeLanguage(language || "");
+    const normalizedCode = code.replace(/\n$/, "");
+    const languageAttr = normalizedLanguage
+      ? ` data-language="${escapeHtml(normalizedLanguage)}"`
+      : "";
+    const languageBadge = normalizedLanguage
+      ? `<div class="sideai-output-code-header">${escapeHtml(
+          normalizedLanguage
+        )}</div>`
+      : "";
+
+    return `<pre class="sideai-output-code">${languageBadge}<code${languageAttr}>${highlightCode(
+      normalizedLanguage,
+      normalizedCode
+    )}</code></pre>`;
+  },
+  html: false,
+  linkify: true,
+  typographer: false,
+  xhtmlOut: true
+});
+
+markdownRenderer.use(createMathPlugin());
+
+markdownRenderer.renderer.rules.math_inline = (tokens, idx) => {
+  return renderMathFormula(tokens[idx].content, false);
+};
+
+markdownRenderer.renderer.rules.math_block = (tokens, idx) => {
+  return `${renderMathFormula(tokens[idx].content, true)}\n`;
+};
+
+markdownRenderer.renderer.rules.code_inline = (tokens, idx) => {
+  return `<code class="sideai-output-inline-code">${escapeHtml(
+    tokens[idx].content
+  )}</code>`;
+};
+
+markdownRenderer.renderer.rules.paragraph_open = (tokens, idx) =>
+  tokens[idx].hidden ? "" : '<p class="sideai-output-paragraph">';
+markdownRenderer.renderer.rules.paragraph_close = (tokens, idx) =>
+  tokens[idx].hidden ? "" : "</p>";
+markdownRenderer.renderer.rules.heading_open = (tokens, idx) => {
+  const tag = tokens[idx].tag;
+  return `<${tag} class="sideai-output-heading sideai-output-heading-${tag.slice(
+    1
+  )}">`;
+};
+markdownRenderer.renderer.rules.bullet_list_open = () =>
+  '<ul class="sideai-output-list">';
+markdownRenderer.renderer.rules.ordered_list_open = () =>
+  '<ol class="sideai-output-list">';
+markdownRenderer.renderer.rules.blockquote_open = () =>
+  '<blockquote class="sideai-output-blockquote">';
+markdownRenderer.renderer.rules.table_open = () =>
+  '<table class="sideai-output-table">';
+markdownRenderer.renderer.rules.link_open = (
+  tokens,
+  idx: number,
+  options,
+  env,
+  self
+) => {
+  const token = tokens[idx];
+  token.attrSet("target", "_blank");
+  token.attrSet("rel", "noreferrer noopener");
+  token.attrJoin("class", "sideai-output-link");
+  void env;
+  return self.renderToken(tokens, idx, options);
+};
+
+export function renderMarkdownPreviewHtml(markdown: string): string {
+  return markdownRenderer.render(markdown);
 }

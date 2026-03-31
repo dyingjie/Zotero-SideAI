@@ -1208,39 +1208,64 @@ describe("startup", function () {
 
   it("should render markdown preview html safely", function () {
     assert.strictEqual(escapeHtml("<tag>&value"), "&lt;tag&gt;&amp;value");
-    assert.strictEqual(
-      renderMarkdownPreviewHtml(
-        ["Line <one>", "", "```html", "<b>safe</b>", "```"].join("\n")
-      ),
-      [
-        '<p class="sideai-output-paragraph">Line &lt;one&gt;</p>',
-        '<pre class="sideai-output-code"><div class="sideai-output-code-header">html</div><code data-language="html">&lt;b&gt;safe&lt;/b&gt;</code></pre>'
-      ].join("")
+    const html = renderMarkdownPreviewHtml(
+      ["Line <one>", "", "```html", "<b>safe</b>", "```"].join("\n")
+    );
+
+    assert.include(
+      html,
+      '<p class="sideai-output-paragraph">Line &lt;one&gt;</p>'
+    );
+    assert.include(
+      html,
+      '<pre class="sideai-output-code"><div class="sideai-output-code-header">html</div><code data-language="html">&lt;b&gt;safe&lt;/b&gt;</code></pre>'
     );
   });
 
   it("should render common markdown syntax in assistant replies", function () {
-    assert.strictEqual(
-      renderMarkdownPreviewHtml(
-        [
-          "## 标题",
-          "",
-          "**重点** 与 *说明* 还有 `code`",
-          "",
-          "- 第一项",
-          "- 第二项",
-          "",
-          "1. 步骤一",
-          "2. 步骤二"
-        ].join("\n")
-      ),
+    const html = renderMarkdownPreviewHtml(
       [
-        '<h2 class="sideai-output-heading sideai-output-heading-2">标题</h2>',
-        '<p class="sideai-output-paragraph"><strong>重点</strong> 与 <em>说明</em> 还有 <code class="sideai-output-inline-code">code</code></p>',
-        '<ul class="sideai-output-list"><li>第一项</li><li>第二项</li></ul>',
-        '<ol class="sideai-output-list"><li>步骤一</li><li>步骤二</li></ol>'
-      ].join("")
+        "## 标题",
+        "",
+        "**重点** 与 *说明* 还有 `code`",
+        "",
+        "- 第一项",
+        "- 第二项",
+        "",
+        "1. 步骤一",
+        "2. 步骤二"
+      ].join("\n")
     );
+
+    assert.include(
+      html,
+      '<h2 class="sideai-output-heading sideai-output-heading-2">标题</h2>'
+    );
+    assert.include(
+      html,
+      '<p class="sideai-output-paragraph"><strong>重点</strong> 与 <em>说明</em> 还有 <code class="sideai-output-inline-code">code</code></p>'
+    );
+    assert.include(html, '<ul class="sideai-output-list"><li>第一项</li>');
+    assert.include(html, "<li>第二项</li>");
+    assert.include(html, '<ol class="sideai-output-list"><li>步骤一</li>');
+    assert.include(html, "<li>步骤二</li>");
+  });
+
+  it("should render inline and block math in assistant replies", function () {
+    const html = renderMarkdownPreviewHtml(
+      [
+        "行内公式 $E=mc^2$。",
+        "",
+        "$$",
+        "\\int_0^1 x^2 dx",
+        "$$"
+      ].join("\n")
+    );
+
+    assert.include(html, 'class="sideai-output-math-inline"');
+    assert.include(html, "<math");
+    assert.include(html, 'class="sideai-output-math-block"');
+    assert.include(html, "<msup>");
   });
 
   it("should highlight common code tokens in fenced blocks", function () {
@@ -1255,11 +1280,20 @@ describe("startup", function () {
         '<span class="sideai-token-keyword">return</span> <span class="sideai-token-number">42</span>;'
       ].join("\n")
     );
-    assert.strictEqual(
-      renderMarkdownPreviewHtml(
-        ["```json", '{ "name": "sideai", "enabled": true }', "```"].join("\n")
-      ),
-      '<pre class="sideai-output-code"><div class="sideai-output-code-header">json</div><code data-language="json">{ <span class="sideai-token-property">"name"</span>: <span class="sideai-token-string">"sideai"</span>, <span class="sideai-token-property">"enabled"</span>: <span class="sideai-token-keyword">true</span> }</code></pre>'
+    const html = renderMarkdownPreviewHtml(
+      ["```json", '{ "name": "sideai", "enabled": true }', "```"].join("\n")
+    );
+    assert.include(
+      html,
+      '<pre class="sideai-output-code"><div class="sideai-output-code-header">json</div><code data-language="json">'
+    );
+    assert.include(
+      html,
+      '<span class="sideai-token-property">"name"</span>'
+    );
+    assert.include(
+      html,
+      '<span class="sideai-token-keyword">true</span>'
     );
   });
 

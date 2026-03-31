@@ -73,6 +73,7 @@ import { getReaderSelectionText } from "./pdf-selection";
 const SIDEBAR_PANE_ID = "sideai-panel";
 const OUTPUT_PLACEHOLDER =
   "发送请求后，AI 回复会显示在这里。";
+const DEBUG_BUILD_MARK = "2026-03-31-r3";
 
 let registeredPaneKey: false | string = false;
 const paneContextStore = new WeakMap<HTMLDivElement, CurrentTextContext>();
@@ -271,6 +272,11 @@ function applyPaneLayout(body: HTMLDivElement): void {
   const outputHeadings = body.querySelectorAll(".sideai-output-heading");
   const outputLists = body.querySelectorAll(".sideai-output-list");
   const outputInlineCodes = body.querySelectorAll(".sideai-output-inline-code");
+  const outputBlockquotes = body.querySelectorAll(".sideai-output-blockquote");
+  const outputTables = body.querySelectorAll(".sideai-output-table");
+  const outputLinks = body.querySelectorAll(".sideai-output-link");
+  const outputMathInline = body.querySelectorAll(".sideai-output-math-inline");
+  const outputMathBlocks = body.querySelectorAll(".sideai-output-math-block");
   const outputCodeBlocks = body.querySelectorAll(".sideai-output-code");
   const outputCodeHeaders = body.querySelectorAll(".sideai-output-code-header");
   const outputCodeElements = body.querySelectorAll(".sideai-output-code code");
@@ -387,6 +393,46 @@ function applyPaneLayout(body: HTMLDivElement): void {
     element.style.background = "var(--fill-tertiary, rgba(0,0,0,0.08))";
     element.style.fontFamily = "monospace";
     element.style.fontSize = "11px";
+  });
+
+  outputBlockquotes.forEach((blockquote: Element) => {
+    const element = blockquote as HTMLElement;
+    element.style.margin = "0 0 14px";
+    element.style.padding = "8px 10px";
+    element.style.borderLeft = "3px solid rgba(32, 98, 180, 0.25)";
+    element.style.background = "rgba(32, 98, 180, 0.04)";
+  });
+
+  outputTables.forEach((table: Element) => {
+    const element = table as HTMLTableElement;
+    element.style.width = "100%";
+    element.style.margin = "0 0 14px";
+    element.style.borderCollapse = "collapse";
+    element.style.fontSize = "12px";
+    element.style.display = "block";
+    element.style.overflowX = "auto";
+  });
+
+  outputLinks.forEach((link: Element) => {
+    const element = link as HTMLAnchorElement;
+    element.style.color = "#2062b4";
+    element.style.textDecoration = "underline";
+  });
+
+  outputMathInline.forEach((inlineMath: Element) => {
+    const element = inlineMath as HTMLElement;
+    element.style.display = "inline-block";
+    element.style.padding = "0 2px";
+    element.style.verticalAlign = "middle";
+  });
+
+  outputMathBlocks.forEach((blockMath: Element) => {
+    const element = blockMath as HTMLElement;
+    element.style.display = "block";
+    element.style.margin = "0 0 14px";
+    element.style.padding = "8px 0";
+    element.style.overflowX = "auto";
+    element.style.textAlign = "center";
   });
 
   outputCodeBlocks.forEach((codeBlock: Element) => {
@@ -719,13 +765,38 @@ function setPaneState(
   if (outputBadgeElement) {
     outputBadgeElement.textContent =
       state === "loading"
-        ? "加载中"
+        ? `加载中 · ${DEBUG_BUILD_MARK}`
         : state === "error"
-          ? "错误"
+          ? `错误 · ${DEBUG_BUILD_MARK}`
           : state === "empty"
-            ? "空闲"
-            : "就绪";
+            ? `空闲 · ${DEBUG_BUILD_MARK}`
+            : `就绪 · ${DEBUG_BUILD_MARK}`;
   }
+}
+
+function describeUnknownError(
+  error: unknown,
+  fallbackMessage: string
+): string {
+  if (error instanceof Error) {
+    const name = error.name?.trim() || "Error";
+    const detail = error.message?.trim() || fallbackMessage;
+    return `${name}: ${detail}`;
+  }
+
+  if (typeof error === "string" && error.trim()) {
+    return error.trim();
+  }
+
+  if (typeof error === "object" && error) {
+    try {
+      return JSON.stringify(error);
+    } catch {
+      return fallbackMessage;
+    }
+  }
+
+  return fallbackMessage;
 }
 
 function getSystemPromptInput(body: HTMLDivElement): HTMLTextAreaElement | null {
@@ -799,6 +870,55 @@ function scrollChatToLatest(body: HTMLDivElement): void {
   outputPreviewElement.scrollTop = outputPreviewElement.scrollHeight;
 }
 
+function renderAssistantMessageContent(content: string): string {
+  try {
+    return renderMarkdownPreviewHtml(content);
+  } catch (error) {
+    const message =
+      error instanceof Error && error.message.trim()
+        ? error.message.trim()
+        : "AI 回复渲染失败，已回退为纯文本显示。";
+
+    Zotero.logError(error instanceof Error ? error : new Error(message));
+    return `<span class="sideai-pane-muted">${content
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+    }</span>`;
+  }
+}
+
+function renderTextMessageContent(
+  document: Document,
+  content: string
+): HTMLDivElement {
+  const element = document.createElement("div");
+  element.className = "sideai-pane-muted";
+  element.textContent = content;
+  return element;
+}
+
+function renderMarkdownMessageContent(
+  document: Document,
+  content: string
+): HTMLDivElement {
+  const element = document.createElement("div");
+
+  try {
+    element.innerHTML = renderAssistantMessageContent(content);
+  } catch (error) {
+    const message =
+      error instanceof Error && error.message.trim()
+        ? error.message.trim()
+        : "AI 回复渲染失败，已回退为纯文本显示。";
+
+    Zotero.logError(error instanceof Error ? error : new Error(message));
+    element.replaceChildren(renderTextMessageContent(document, content));
+  }
+
+  return element;
+}
+
 function renderChatStream(body: HTMLDivElement): void {
   const outputPreviewElement = body.querySelector(
     "[data-sideai-role='output-preview']"
@@ -815,56 +935,60 @@ function renderChatStream(body: HTMLDivElement): void {
     return;
   }
 
-  outputPreviewElement.innerHTML = `
-    <div class="sideai-chat-stream" data-sideai-role="chat-stream">
-      ${messages
-        .map((message) => {
-          const renderedContent =
-            message.mode === "markdown" && message.role === "assistant"
-              ? renderMarkdownPreviewHtml(message.content)
-              : `<div class="sideai-pane-muted">${message.content}</div>`;
+  const documentRef = outputPreviewElement.ownerDocument || body.ownerDocument;
+  if (!documentRef) {
+    outputPreviewElement.textContent = OUTPUT_PLACEHOLDER;
+    return;
+  }
 
-          return `
-            <div class="sideai-chat-message" data-sideai-role="${message.role}" data-sideai-tone="${message.tone}">
-              <div class="sideai-chat-role">${
-                message.role === "user"
-                  ? "用户"
-                  : message.role === "assistant"
-                    ? "AI"
-                    : "状态"
-              }</div>
-              <div>${renderedContent}</div>
-              ${
-                message.tone === "error" && message.retryMessages?.length
-                  ? `<button class="sideai-chat-retry" data-sideai-retry-id="${message.id}">重试</button>`
-                  : ""
-              }
-            </div>
-          `;
-        })
-        .join("")}
-    </div>
-  `;
+  const chatStream = documentRef.createElement("div");
+  chatStream.className = "sideai-chat-stream";
+  chatStream.dataset.sideaiRole = "chat-stream";
 
-  outputPreviewElement
-    .querySelectorAll("[data-sideai-retry-id]")
-    .forEach((button: Element) => {
-      button.addEventListener("click", () => {
-        const retryId = (button as HTMLButtonElement).dataset.sideaiRetryId;
-        const retryMessage = getChatMessages(body).find(
-          (message) => message.id === retryId
-        );
+  messages.forEach((message) => {
+    const messageElement = documentRef.createElement("div");
+    messageElement.className = "sideai-chat-message";
+    messageElement.dataset.sideaiRole = message.role;
+    messageElement.dataset.sideaiTone = message.tone;
 
-        if (!retryMessage?.retryMessages?.length || !retryMessage.retryModel) {
+    const roleElement = documentRef.createElement("div");
+    roleElement.className = "sideai-chat-role";
+    roleElement.textContent =
+      message.role === "user"
+        ? "用户"
+        : message.role === "assistant"
+          ? "AI"
+          : "状态";
+
+    const contentElement =
+      message.mode === "markdown" && message.role === "assistant"
+        ? renderMarkdownMessageContent(documentRef, message.content)
+        : renderTextMessageContent(documentRef, message.content);
+
+    messageElement.append(roleElement, contentElement);
+
+    if (message.tone === "error" && message.retryMessages?.length) {
+      const retryButton = documentRef.createElement("button");
+      retryButton.className = "sideai-chat-retry";
+      retryButton.dataset.sideaiRetryId = message.id;
+      retryButton.textContent = "重试";
+      retryButton.addEventListener("click", () => {
+        if (!message.retryMessages?.length || !message.retryModel) {
           return;
         }
 
         void sendCurrentPreview(body, {
-          model: retryMessage.retryModel,
-          retryMessages: retryMessage.retryMessages
+          model: message.retryModel,
+          retryMessages: message.retryMessages
         });
       });
-    });
+      messageElement.appendChild(retryButton);
+    }
+
+    chatStream.appendChild(messageElement);
+  });
+
+  outputPreviewElement.replaceChildren(chatStream);
 
   scrollChatToLatest(body);
   applyPaneLayout(body);
@@ -883,12 +1007,23 @@ function setOutputPreviewContent(
     return;
   }
 
-  outputPreviewElement.innerHTML =
-    mode === "markdown"
-      ? renderMarkdownPreviewHtml(content)
-      : "";
+  if (mode === "markdown") {
+    const documentRef = outputPreviewElement.ownerDocument || body.ownerDocument;
+    if (!documentRef) {
+      outputPreviewElement.textContent = content;
+      applyPaneLayout(body);
+      return;
+    }
 
-  if (mode === "text") {
+    const container = renderMarkdownMessageContent(
+      documentRef,
+      content
+    );
+    outputPreviewElement.replaceChildren();
+    while (container.firstChild) {
+      outputPreviewElement.appendChild(container.firstChild);
+    }
+  } else {
     outputPreviewElement.textContent = content;
   }
 
@@ -911,42 +1046,45 @@ function renderHistoryList(body: HTMLDivElement): void {
     return;
   }
 
-  historyListElement.innerHTML = history
-    .map(
-      (entry) => `
-        <div class="sideai-history-item">
-          <div class="sideai-history-badge" data-sideai-status="${entry.status}">
-            ${entry.status === "error" ? "失败" : "成功"}
-          </div>
-          <div>${entry.summary}</div>
-          <button class="sideai-history-open" data-sideai-history-id="${entry.id}">打开</button>
-        </div>
-      `
-    )
-    .join("");
+  const documentRef = historyListElement.ownerDocument || body.ownerDocument;
+  if (!documentRef) {
+    historyListElement.textContent = "暂无会话历史。";
+    return;
+  }
 
-  historyListElement
-    .querySelectorAll("[data-sideai-history-id]")
-    .forEach((button: Element) => {
-      button.addEventListener("click", () => {
-        const historyId = (button as HTMLButtonElement).dataset.sideaiHistoryId;
-        const targetEntry = getSessionHistory(body).find(
-          (entry) => entry.id === historyId
-        );
+  const fragment = documentRef.createDocumentFragment();
 
-        if (!targetEntry) {
-          return;
-        }
+  history.forEach((entry) => {
+    const item = documentRef.createElement("div");
+    item.className = "sideai-history-item";
 
-        setOutputPreviewContent(body, targetEntry.content, targetEntry.mode);
-        setActionStatus(body, "已加载一条历史会话结果。");
-        setPaneState(
-          body,
-          targetEntry.status === "error" ? "error" : "ready",
-          targetEntry.status === "error" ? targetEntry.summary : undefined
-        );
-      });
+    const badge = documentRef.createElement("div");
+    badge.className = "sideai-history-badge";
+    badge.dataset.sideaiStatus = entry.status;
+    badge.textContent = entry.status === "error" ? "失败" : "成功";
+
+    const summary = documentRef.createElement("div");
+    summary.textContent = entry.summary;
+
+    const openButton = documentRef.createElement("button");
+    openButton.className = "sideai-history-open";
+    openButton.dataset.sideaiHistoryId = entry.id;
+    openButton.textContent = "打开";
+    openButton.addEventListener("click", () => {
+      setOutputPreviewContent(body, entry.content, entry.mode);
+      setActionStatus(body, "已加载一条历史会话结果。");
+      setPaneState(
+        body,
+        entry.status === "error" ? "error" : "ready",
+        entry.status === "error" ? entry.summary : undefined
+      );
     });
+
+    item.append(badge, summary, openButton);
+    fragment.appendChild(item);
+  });
+
+  historyListElement.replaceChildren(fragment);
 
   applyPaneLayout(body);
 }
@@ -1184,10 +1322,11 @@ function handlePaneActionError(
   fallbackMessage: string,
   feedbackTone: ConfigFeedbackTone = "error"
 ): void {
+  const detail = describeUnknownError(error, fallbackMessage);
   const message =
-    error instanceof Error && error.message.trim()
-      ? error.message.trim()
-      : fallbackMessage;
+    detail && detail !== fallbackMessage
+      ? `${fallbackMessage} ${detail}`
+      : detail || fallbackMessage;
 
   Zotero.logError(
     error instanceof Error ? error : new Error(message)
@@ -1201,10 +1340,9 @@ function handlePaneButtonAction(
   body: HTMLDivElement,
   role: string
 ): void {
-  setActionStatus(body, `调试：已触发 ${role}`);
-
   switch (role) {
     case "send-button":
+      setActionStatus(body, `开始发送请求 · ${DEBUG_BUILD_MARK}`);
       void sendCurrentPreview(body).catch((error) => {
         handlePaneActionError(body, error, "发送消息失败。");
       });
@@ -1314,7 +1452,6 @@ function bindPaneInteractions(body: HTMLDivElement): void {
 
   body.addEventListener("click", handleButtonLikeEvent, true);
   body.addEventListener("command", handleButtonLikeEvent, true);
-  body.addEventListener("mouseup", handleButtonLikeEvent, true);
 
   const composerInput = getComposerInput(body);
   const promptPresetSelect = getPromptPresetSelect(body);
@@ -1549,83 +1686,87 @@ async function sendCurrentPreview(
     retryMessages: ChatCompletionMessage[];
   }
 ): Promise<void> {
-  const currentState = (body.getAttribute("data-sideai-state") ||
-    "empty") as PaneState;
-
-  if (!shouldStartSendRequest(currentState)) {
-    setActionStatus(body, "请求正在进行中。");
-    return;
-  }
-
-  const systemPromptInput = getSystemPromptInput(body);
+  let previewMessages: ChatCompletionMessage[] = retryOptions?.retryMessages || [];
   const outputPreviewElement = body.querySelector(
     "[data-sideai-role='output-preview']"
   ) as HTMLDivElement | null;
-  const currentTextContext = paneContextStore.get(body) || {
-    abstractText: "",
-    contextSource: "item",
-    contextSourceLabel: "条目上下文",
-    notesText: "",
-    pdfSelectionText: "",
-    previewText: "当前没有可用文本。",
-    title: "未选择条目"
-  };
 
-  const missingFields = getMissingConfigFields({
-    apiKey: getSavedApiKey(),
-    baseUrl: getSavedBaseUrl(),
-    model: getSavedModel(),
-    systemPrompt: systemPromptInput?.value || ""
-  });
+  try {
+    const currentState = (body.getAttribute("data-sideai-state") ||
+      "empty") as PaneState;
 
-  if (missingFields.length) {
-    const message = getMissingConfigMessage(missingFields);
-    setConfigFeedback(body, message, "error");
-    setPaneState(body, "error", message);
-    return;
-  }
+    if (!shouldStartSendRequest(currentState)) {
+      setActionStatus(body, "请求正在进行中。");
+      return;
+    }
 
-  const currentText = currentTextContext?.previewText?.trim() || "";
-  if (!currentText || currentText === "当前没有可用文本。") {
-    setPaneState(body, "error", "当前没有可发送的文本。");
-    return;
-  }
+    const systemPromptInput = getSystemPromptInput(body);
+    const currentTextContext = paneContextStore.get(body) || {
+      abstractText: "",
+      contextSource: "item",
+      contextSourceLabel: "条目上下文",
+      notesText: "",
+      pdfSelectionText: "",
+      previewText: "当前没有可用文本。",
+      title: "未选择条目"
+    };
 
-  const previewMessages =
-    retryOptions?.retryMessages ||
-    buildPreviewMessages({
-      context: currentTextContext,
-      systemPromptTemplate: systemPromptInput?.value || "",
-      taskInstruction: getTaskInstruction(body)
+    const missingFields = getMissingConfigFields({
+      apiKey: getSavedApiKey(),
+      baseUrl: getSavedBaseUrl(),
+      model: getSavedModel(),
+      systemPrompt: systemPromptInput?.value || ""
     });
-  const latestUserMessage = previewMessages.find((message) => message.role === "user");
 
-  if (latestUserMessage && !retryOptions) {
+    if (missingFields.length) {
+      const message = getMissingConfigMessage(missingFields);
+      setConfigFeedback(body, message, "error");
+      setPaneState(body, "error", message);
+      return;
+    }
+
+    const currentText = currentTextContext?.previewText?.trim() || "";
+    if (!currentText || currentText === "当前没有可用文本。") {
+      setPaneState(body, "error", "当前没有可发送的文本。");
+      return;
+    }
+
+    previewMessages =
+      retryOptions?.retryMessages ||
+      buildPreviewMessages({
+        context: currentTextContext,
+        systemPromptTemplate: systemPromptInput?.value || "",
+        taskInstruction: getTaskInstruction(body)
+      });
+    const latestUserMessage = previewMessages.find(
+      (message) => message.role === "user"
+    );
+
+    if (latestUserMessage && !retryOptions) {
+      pushChatMessage(
+        body,
+        buildChatMessageEntry({
+          content: latestUserMessage.content,
+          mode: "text",
+          role: "user"
+        })
+      );
+    }
     pushChatMessage(
       body,
       buildChatMessageEntry({
-        content: latestUserMessage.content,
+        content: retryOptions
+          ? "正在重试失败请求..."
+          : "正在请求模型回复...",
         mode: "text",
-        role: "user"
+        role: "status",
+        tone: "loading"
       })
     );
-  }
-  pushChatMessage(
-    body,
-    buildChatMessageEntry({
-      content: retryOptions
-        ? "正在重试失败请求..."
-        : "正在请求模型回复...",
-      mode: "text",
-      role: "status",
-      tone: "loading"
-    })
-  );
 
-  setPaneState(body, "loading");
-  renderChatStream(body);
+    setPaneState(body, "loading");
+    renderChatStream(body);
 
-  try {
     const responseText = await requestChatCompletionsText({
       apiKey: getSavedApiKey(),
       baseUrl: getSavedBaseUrl(),
@@ -1691,6 +1832,10 @@ async function sendCurrentPreview(
     renderHistoryList(body);
 
     setPaneState(body, "error", message);
+
+    if (outputPreviewElement) {
+      applyPaneLayout(body);
+    }
   }
 }
 
@@ -1793,73 +1938,9 @@ export function registerSideAIPane(): false | string {
     onInit: ({ body }) => {
       applyPaneLayout(body);
 
-      const sendButton = body.querySelector(
-        "[data-sideai-role='send-button']"
-      ) as HTMLButtonElement | null;
-      const copyButton = body.querySelector(
-        "[data-sideai-role='copy-button']"
-      ) as HTMLButtonElement | null;
-      const savePresetButton = body.querySelector(
-        "[data-sideai-role='save-preset-button']"
-      ) as HTMLButtonElement | null;
-      const newPresetButton = body.querySelector(
-        "[data-sideai-role='new-preset-button']"
-      ) as HTMLButtonElement | null;
-      const deletePresetButton = body.querySelector(
-        "[data-sideai-role='delete-preset-button']"
-      ) as HTMLButtonElement | null;
-      const resetPresetsButton = body.querySelector(
-        "[data-sideai-role='reset-presets-button']"
-      ) as HTMLButtonElement | null;
-      const clearButton = body.querySelector(
-        "[data-sideai-role='clear-button']"
-      ) as HTMLButtonElement | null;
-      const jumpLatestButton = body.querySelector(
-        "[data-sideai-role='jump-latest-button']"
-      ) as HTMLButtonElement | null;
-
       syncSavedSettings(body);
       refreshRequestPreview(body);
       bindPaneInteractions(body);
-
-      sendButton?.addEventListener("click", (event) => {
-        event.preventDefault();
-        handlePaneButtonAction(body, "send-button");
-      });
-
-      copyButton?.addEventListener("click", () => {
-        handlePaneButtonAction(body, "copy-button");
-      });
-
-      savePresetButton?.addEventListener("click", (event) => {
-        event.preventDefault();
-        handlePaneButtonAction(body, "save-preset-button");
-      });
-
-      newPresetButton?.addEventListener("click", (event) => {
-        event.preventDefault();
-        handlePaneButtonAction(body, "new-preset-button");
-      });
-
-      deletePresetButton?.addEventListener("click", (event) => {
-        event.preventDefault();
-        handlePaneButtonAction(body, "delete-preset-button");
-      });
-
-      resetPresetsButton?.addEventListener("click", (event) => {
-        event.preventDefault();
-        handlePaneButtonAction(body, "reset-presets-button");
-      });
-
-      clearButton?.addEventListener("click", (event) => {
-        event.preventDefault();
-        handlePaneButtonAction(body, "clear-button");
-      });
-
-      jumpLatestButton?.addEventListener("click", (event) => {
-        event.preventDefault();
-        handlePaneButtonAction(body, "jump-latest-button");
-      });
     },
     onItemChange: ({ item, setEnabled, tabType }) => {
       setEnabled((tabType === "library" || tabType === "reader") && !!item);
