@@ -1256,6 +1256,33 @@ describe("startup", function () {
     assert.strictEqual(history[0].status, "error");
   });
 
+  it("should keep large history lists bounded and pane areas scroll-friendly", function () {
+    const largeHistoryEntries = Array.from(
+      { length: MAX_HISTORY_ITEMS * 3 },
+      (_value, index) =>
+        buildHistoryEntry({
+          content: `History item ${index} `.repeat(8),
+          mode: "markdown",
+          status: index % 2 === 0 ? "success" : "error"
+        })
+    );
+    const history = largeHistoryEntries.reduce(
+      (entries, entry) => appendHistoryEntry(entries, entry),
+      [] as SessionHistoryEntry[]
+    );
+
+    assert.strictEqual(history.length, MAX_HISTORY_ITEMS);
+    assert.strictEqual(history[0].content.includes("History item"), true);
+
+    const compactLayout = getPaneLayoutProfile(COMPACT_PANE_WIDTH - 1);
+    const regularLayout = getPaneLayoutProfile(COMPACT_PANE_WIDTH + 80);
+
+    assert.strictEqual(compactLayout.historyMaxHeight, "128px");
+    assert.strictEqual(compactLayout.outputMaxHeight, "144px");
+    assert.strictEqual(regularLayout.historyMaxHeight, "160px");
+    assert.strictEqual(regularLayout.outputMaxHeight, "180px");
+  });
+
   it("should isolate session history by Zotero item id", function () {
     const itemA = { id: 101 } as Zotero.Item;
     const itemB = { id: 202 } as Zotero.Item;
