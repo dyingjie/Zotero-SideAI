@@ -1,4 +1,8 @@
+import { truncatePreviewText } from "../sidebar/context-preview";
+
 export type ChatCompletionMessageRole = "system" | "user" | "assistant";
+
+export const MAX_TASK_INSTRUCTION_LENGTH = 2000;
 
 export type ChatCompletionMessage = {
   content: string;
@@ -23,7 +27,10 @@ export function createUserContextMessage(input: {
   currentText: string;
   taskInstruction?: string;
 }): ChatCompletionMessage {
-  const taskInstruction = input.taskInstruction?.trim() || "";
+  const taskInstruction = truncatePreviewText(
+    input.taskInstruction?.trim() || "",
+    MAX_TASK_INSTRUCTION_LENGTH
+  );
   const currentText = input.currentText.trim();
 
   return {

@@ -87,6 +87,7 @@ import {
   renderMarkdownPreviewHtml
 } from "../src/sidebar/output-render";
 import {
+  MAX_TASK_INSTRUCTION_LENGTH,
   createUserContextMessage,
   createSystemPromptMessage,
   createChatCompletionsRequestBody
@@ -571,6 +572,19 @@ describe("startup", function () {
     assert.strictEqual(previewText.endsWith(TRUNCATED_PREVIEW_SUFFIX), true);
   });
 
+  it("should truncate overly long pdf selection text inside preview context", function () {
+    const previewText = buildPreviewTextFromContext({
+      abstractText: "",
+      notesText: "",
+      pdfSelectionText: "P".repeat(MAX_CONTEXT_PREVIEW_LENGTH + 120),
+      title: "Paper title"
+    });
+
+    assert.strictEqual(previewText.length, MAX_CONTEXT_PREVIEW_LENGTH);
+    assert.strictEqual(previewText.includes("PDF Selection:\n"), true);
+    assert.strictEqual(previewText.endsWith(TRUNCATED_PREVIEW_SUFFIX), true);
+  });
+
   it("should define chat completions request body structure", function () {
     assert.deepEqual(
       createChatCompletionsRequestBody({
@@ -608,6 +622,20 @@ describe("startup", function () {
           "Please analyze the following paper.\n\nTitle:\nPaper\n\nAbstract:\nSummary",
         role: "user"
       }
+    );
+  });
+
+  it("should truncate overly long active composer messages before building user message", function () {
+    const message = createUserContextMessage({
+      currentText: "Title:\nPaper",
+      taskInstruction: "Q".repeat(MAX_TASK_INSTRUCTION_LENGTH + 120)
+    });
+
+    assert.strictEqual(message.content.includes("Title:\nPaper"), true);
+    assert.strictEqual(message.content.includes(TRUNCATED_PREVIEW_SUFFIX), true);
+    assert.strictEqual(
+      message.content.startsWith("Q".repeat(MAX_TASK_INSTRUCTION_LENGTH - TRUNCATED_PREVIEW_SUFFIX.length - 1)),
+      true
     );
   });
 
