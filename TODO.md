@@ -258,7 +258,7 @@ docs/
 ### 模块拆分
 
 - [x] `settings`：配置读取、保存、校验
-- [ ] `context`：当前文本采集
+- [x] `context`：当前文本采集
 - [ ] `prompt`：固定提示词与消息组装
 - [ ] `api`：AI 请求封装
 - [ ] `sidebar`：侧边栏 UI 与交互
