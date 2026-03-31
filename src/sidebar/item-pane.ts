@@ -555,6 +555,7 @@ function buildCurrentTextContext(item?: Zotero.Item): CurrentTextContext {
       abstractText: "",
       contextSource: "item",
       contextSourceLabel: "Item Context",
+      contextWarnings: [],
       notesText: "",
       pdfSelectionText: "",
       previewText: "No current text available.",
@@ -588,6 +589,7 @@ function buildCurrentTextContext(item?: Zotero.Item): CurrentTextContext {
     abstractText: normalizedAbstractText,
     contextSource: "item",
     contextSourceLabel: "Item Context",
+    contextWarnings: [],
     notesText,
     pdfSelectionText: "",
     previewText: previewText || "Selected item has no previewable text yet.",
@@ -1186,6 +1188,7 @@ function resolveActivePaneItem(
 ): {
   activeItem?: Zotero.Item;
   contextSource: "item" | "pdf-reader";
+  contextWarnings: string[];
   pdfSelectionText: string;
   sourceLabel: string;
 } {
@@ -1205,6 +1208,7 @@ function resolveActivePaneItem(
   return {
     activeItem: paneContext.item as Zotero.Item | undefined,
     contextSource: paneContext.source,
+    contextWarnings: paneContext.warnings,
     pdfSelectionText: paneContext.source === "pdf-reader"
       ? getReaderSelectionText(reader)
       : "",
@@ -1223,6 +1227,7 @@ function renderPane(
   const currentTextContext = buildCurrentTextContext(paneItem.activeItem);
   currentTextContext.contextSource = paneItem.contextSource;
   currentTextContext.contextSourceLabel = paneItem.sourceLabel;
+  currentTextContext.contextWarnings = [...paneItem.contextWarnings];
   currentTextContext.pdfSelectionText = paneItem.pdfSelectionText;
   currentTextContext.previewText = buildPreviewTextFromContext({
     abstractText: currentTextContext.abstractText,
@@ -1230,6 +1235,23 @@ function renderPane(
     pdfSelectionText: currentTextContext.pdfSelectionText,
     title: currentTextContext.title
   }) || "Selected item has no previewable text yet.";
+  if (
+    currentTextContext.contextSource === "pdf-reader" &&
+    !currentTextContext.pdfSelectionText
+  ) {
+    currentTextContext.contextWarnings?.push(
+      "No PDF text is selected. Falling back to item metadata context."
+    );
+  }
+  if (
+    currentTextContext.contextSource === "pdf-reader" &&
+    (!currentTextContext.previewText ||
+      currentTextContext.previewText === "Selected item has no previewable text yet.")
+  ) {
+    currentTextContext.contextWarnings?.push(
+      "No PDF selection or item metadata text is currently available."
+    );
+  }
   const sessionKey = getItemSessionKey(paneItem.activeItem);
   paneActiveSessionKeyStore.set(body, sessionKey);
   if (!paneSessionStore.has(body)) {
@@ -1271,7 +1293,14 @@ function renderPane(
   );
 
   if (contextPreviewElement) {
-    contextPreviewElement.textContent = currentTextContext.previewText;
+    contextPreviewElement.textContent = [
+      ...(currentTextContext.contextWarnings || []).map(
+        (warning) => `[Warning] ${warning}`
+      ),
+      currentTextContext.previewText
+    ]
+      .filter(Boolean)
+      .join("\n\n");
   }
 
   if (requestPreviewElement) {
@@ -1293,6 +1322,9 @@ function renderPane(
   }
 
   setPaneState(body, "ready");
+  if (currentTextContext.contextWarnings?.length) {
+    setActionStatus(body, currentTextContext.contextWarnings[0]);
+  }
 }
 
 function copyOutput(body: HTMLDivElement): void {

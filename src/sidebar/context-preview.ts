@@ -12,6 +12,7 @@ export type CurrentTextContext = {
   abstractText: string;
   contextSource?: "item" | "pdf-reader";
   contextSourceLabel?: string;
+  contextWarnings?: string[];
   notesText: string;
   pdfSelectionText?: string;
   previewText: string;

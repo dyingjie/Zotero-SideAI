@@ -403,6 +403,7 @@ describe("startup", function () {
     assert.strictEqual(result.item, parentItem);
     assert.strictEqual(result.parentItem, parentItem);
     assert.strictEqual(result.pdfAttachmentItem, pdfAttachment);
+    assert.deepEqual(result.warnings, []);
   });
 
   it("should keep library item context separate from pdf reader context", function () {
@@ -418,6 +419,26 @@ describe("startup", function () {
     assert.strictEqual(result.item, regularItem);
     assert.isUndefined(result.parentItem);
     assert.isUndefined(result.pdfAttachmentItem);
+    assert.deepEqual(result.warnings, []);
+  });
+
+  it("should warn when pdf reader item has no parent library item", function () {
+    const pdfAttachment = {
+      id: 4,
+      parentItemID: false,
+      isPDFAttachment: () => true
+    };
+
+    const result = resolvePaneContext({
+      readerItem: pdfAttachment,
+      tabType: "reader"
+    });
+
+    assert.strictEqual(result.source, "pdf-reader");
+    assert.strictEqual(result.item, pdfAttachment);
+    assert.deepEqual(result.warnings, [
+      "PDF reader item is not linked to a parent library item."
+    ]);
   });
 
   it("should read and normalize current pdf selection text safely", function () {

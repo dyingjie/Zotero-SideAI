@@ -12,6 +12,7 @@ export type PaneContextResolution = {
   item?: PaneContextItemLike;
   parentItem?: PaneContextItemLike;
   pdfAttachmentItem?: PaneContextItemLike;
+  warnings: string[];
 };
 
 export function resolvePaneContext(options: {
@@ -25,7 +26,8 @@ export function resolvePaneContext(options: {
   if (!currentItem) {
     return {
       source: "item",
-      sourceLabel: "Item Context"
+      sourceLabel: "Item Context",
+      warnings: []
     };
   }
 
@@ -38,7 +40,8 @@ export function resolvePaneContext(options: {
     return {
       source: "item",
       sourceLabel: "Item Context",
-      item: currentItem
+      item: currentItem,
+      warnings: []
     };
   }
 
@@ -49,11 +52,17 @@ export function resolvePaneContext(options: {
       ? options.resolveParentItem(parentItemID)
       : undefined;
 
+  const warnings: string[] = [];
+  if (!parentItem) {
+    warnings.push("PDF reader item is not linked to a parent library item.");
+  }
+
   return {
     source: "pdf-reader",
     sourceLabel: "PDF Context",
     item: parentItem || currentItem,
     parentItem,
-    pdfAttachmentItem: currentItem
+    pdfAttachmentItem: currentItem,
+    warnings
   };
 }
