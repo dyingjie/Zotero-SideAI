@@ -546,6 +546,24 @@ describe("startup", function () {
     assert.strictEqual(clearedTimeoutId, 456 as ReturnType<typeof setTimeout>);
   });
 
+  it("should gracefully skip timeout wiring when AbortController is unavailable", function () {
+    const originalAbortController = globalThis.AbortController;
+
+    try {
+      Reflect.deleteProperty(globalThis, "AbortController");
+      const timeout = createTimeoutSignal({
+        timeoutMs: 5000
+      });
+
+      assert.strictEqual(timeout.signal, undefined);
+      timeout.cleanup();
+    } finally {
+      if (originalAbortController) {
+        globalThis.AbortController = originalAbortController;
+      }
+    }
+  });
+
   it("should surface timeout failures during request execution", async function () {
     let thrownError: unknown;
 

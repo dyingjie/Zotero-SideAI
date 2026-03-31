@@ -38,6 +38,12 @@ export function createTimeoutSignal(input: {
     };
   }
 
+  if (typeof AbortController === "undefined") {
+    return {
+      cleanup: () => {}
+    };
+  }
+
   const controller = new AbortController();
   const setTimeoutFn = input.setTimeoutFn || setTimeout;
   const clearTimeoutFn = input.clearTimeoutFn || clearTimeout;
