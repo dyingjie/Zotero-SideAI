@@ -362,6 +362,27 @@ describe("startup", function () {
     );
   });
 
+  it("should fall back to item metadata context when pdf selection is empty", function () {
+    assert.strictEqual(
+      buildPreviewTextFromContext({
+        abstractText: "Abstract body",
+        notesText: "Note body",
+        pdfSelectionText: "",
+        title: "Paper title"
+      }),
+      [
+        "Title:",
+        "Paper title",
+        "",
+        "Abstract:",
+        "Abstract body",
+        "",
+        "Notes:",
+        "Note body"
+      ].join("\n")
+    );
+  });
+
   it("should recognize pdf reader context and resolve parent item as active context", function () {
     const parentItem = { id: 1 };
     const pdfAttachment = {
