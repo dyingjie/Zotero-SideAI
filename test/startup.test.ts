@@ -1223,6 +1223,65 @@ describe("startup", function () {
     );
   });
 
+  it("should keep multi-turn chat messages and history across consecutive sends", function () {
+    const firstUserMessage = buildChatMessageEntry({
+      content: "First question",
+      mode: "text",
+      role: "user"
+    });
+    const firstAssistantMessage = buildChatMessageEntry({
+      content: "First answer",
+      mode: "markdown",
+      role: "assistant"
+    });
+    const secondUserMessage = buildChatMessageEntry({
+      content: "Second follow-up",
+      mode: "text",
+      role: "user"
+    });
+    const secondAssistantMessage = buildChatMessageEntry({
+      content: "Second answer",
+      mode: "markdown",
+      role: "assistant"
+    });
+
+    let chatMessages = appendChatMessage([], firstUserMessage);
+    chatMessages = appendChatMessage(chatMessages, firstAssistantMessage);
+    chatMessages = appendChatMessage(chatMessages, secondUserMessage);
+    chatMessages = appendChatMessage(chatMessages, secondAssistantMessage);
+
+    assert.deepEqual(
+      chatMessages.map((message) => [message.role, message.content]),
+      [
+        ["user", "First question"],
+        ["assistant", "First answer"],
+        ["user", "Second follow-up"],
+        ["assistant", "Second answer"]
+      ]
+    );
+
+    let history = appendHistoryEntry(
+      [],
+      buildHistoryEntry({
+        content: "First answer",
+        mode: "markdown",
+        status: "success"
+      })
+    );
+    history = appendHistoryEntry(
+      history,
+      buildHistoryEntry({
+        content: "Second answer",
+        mode: "markdown",
+        status: "success"
+      })
+    );
+
+    assert.strictEqual(history.length, 2);
+    assert.strictEqual(history[0].content, "Second answer");
+    assert.strictEqual(history[1].content, "First answer");
+  });
+
   it("should preserve retry metadata on error chat entries", function () {
     const retryMessages = [
       { role: "system", content: "System prompt" },
