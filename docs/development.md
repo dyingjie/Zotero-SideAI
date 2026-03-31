@@ -186,6 +186,13 @@ npm test
 - 当前文本预览、Prompt 预览、Chat Completions 请求构造与返回解析链路可正常工作
 - 输出区支持正常结果、错误结果、复制、重试、清空、Markdown 渲染、代码高亮和历史记录
 
+本轮额外联调记录：
+
+- 2026-03-31 已对一个 OpenAI 兼容服务实际发起 `POST /v1/chat/completions`
+- 已确认服务鉴权和 Chat Completions 路由可用
+- 默认模型 `gpt-4.1-mini` 在该服务上返回 `unknown provider for model gpt-4.1-mini`
+- 改用服务可用模型 `gpt-5.4` 后，最小请求成功返回 `OK`
+
 建议后续继续沿用下面这条命令作为主流程回归入口：
 
 ```powershell
