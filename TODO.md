@@ -232,7 +232,7 @@ docs/
 
 兼容性关注：
 
-- [ ] Windows
+- [x] Windows
 - [ ] macOS
 - [ ] Zotero 8 不同窗口尺寸
 
