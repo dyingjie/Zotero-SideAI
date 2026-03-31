@@ -211,8 +211,8 @@ npm run build
 例如：
 
 - 可填写：`https://api.openai.com/v1`
-- 可填写：`http://10.8.133.161:8317/v1`
-- 不要填写：`http://10.8.133.161:8317/v1/chat/completions`
+- 可填写：`http://127.0.0.1:8000/v1`
+- 不要填写：`http://127.0.0.1:8000/v1/chat/completions`
 
 ### `Model`
 
