@@ -1,3 +1,4 @@
+import type { ChatCompletionMessage } from "../services/chat-completions";
 import type { OutputRenderMode } from "./session-history";
 
 export type ChatMessageRole = "assistant" | "status" | "user";
@@ -8,6 +9,8 @@ export type ChatMessageEntry = {
   id: string;
   mode: OutputRenderMode;
   role: ChatMessageRole;
+  retryMessages?: ChatCompletionMessage[];
+  retryModel?: string;
   tone: ChatMessageTone;
 };
 
@@ -15,6 +18,8 @@ export function buildChatMessageEntry(input: {
   content: string;
   mode: OutputRenderMode;
   role: ChatMessageRole;
+  retryMessages?: ChatCompletionMessage[];
+  retryModel?: string;
   tone?: ChatMessageTone;
 }): ChatMessageEntry {
   return {
@@ -22,6 +27,8 @@ export function buildChatMessageEntry(input: {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     mode: input.mode,
     role: input.role,
+    retryMessages: input.retryMessages,
+    retryModel: input.retryModel,
     tone: input.tone || "default"
   };
 }

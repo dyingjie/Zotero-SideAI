@@ -23,6 +23,7 @@ import {
 import {
   requestChatCompletionsText
 } from "../services/ai-request";
+import type { ChatCompletionMessage } from "../services/chat-completions";
 import {
   buildPreviewMessages,
   formatPreviewMessages
@@ -238,6 +239,7 @@ function applyPaneLayout(body: HTMLDivElement): void {
   ) as HTMLDivElement | null;
   const chatMessages = body.querySelectorAll(".sideai-chat-message");
   const chatRoles = body.querySelectorAll(".sideai-chat-role");
+  const retryButtons = body.querySelectorAll(".sideai-chat-retry");
 
   if (contextPreview) {
     contextPreview.style.maxHeight = layoutProfile.contextMaxHeight;
@@ -285,6 +287,12 @@ function applyPaneLayout(body: HTMLDivElement): void {
     element.style.textTransform = "uppercase";
     element.style.letterSpacing = "0.04em";
     element.style.color = "var(--text-color-deemphasized, #666)";
+  });
+
+  retryButtons.forEach((button: Element) => {
+    const element = button as HTMLButtonElement;
+    element.style.alignSelf = "flex-start";
+    element.style.minHeight = "28px";
   });
 
   outputParagraphs.forEach((paragraph: Element) => {
@@ -694,12 +702,37 @@ function renderChatStream(body: HTMLDivElement): void {
                     : "Status"
               }</div>
               <div>${renderedContent}</div>
+              ${
+                message.tone === "error" && message.retryMessages?.length
+                  ? `<button class="sideai-chat-retry" data-sideai-retry-id="${message.id}">Retry</button>`
+                  : ""
+              }
             </div>
           `;
         })
         .join("")}
     </div>
   `;
+
+  outputPreviewElement
+    .querySelectorAll("[data-sideai-retry-id]")
+    .forEach((button: Element) => {
+      button.addEventListener("click", () => {
+        const retryId = (button as HTMLButtonElement).dataset.sideaiRetryId;
+        const retryMessage = getChatMessages(body).find(
+          (message) => message.id === retryId
+        );
+
+        if (!retryMessage?.retryMessages?.length || !retryMessage.retryModel) {
+          return;
+        }
+
+        void sendCurrentPreview(body, {
+          model: retryMessage.retryModel,
+          retryMessages: retryMessage.retryMessages
+        });
+      });
+    });
 
   outputPreviewElement.scrollTop = outputPreviewElement.scrollHeight;
   applyPaneLayout(body);
@@ -1001,7 +1034,13 @@ function clearOutput(body: HTMLDivElement): void {
   setPaneState(body, "ready");
 }
 
-async function sendCurrentPreview(body: HTMLDivElement): Promise<void> {
+async function sendCurrentPreview(
+  body: HTMLDivElement,
+  retryOptions?: {
+    model: string;
+    retryMessages: ChatCompletionMessage[];
+  }
+): Promise<void> {
   const currentState = (body.getAttribute("data-sideai-state") ||
     "empty") as PaneState;
 
@@ -1044,14 +1083,16 @@ async function sendCurrentPreview(body: HTMLDivElement): Promise<void> {
     return;
   }
 
-  const previewMessages = buildPreviewMessages({
-    context: currentTextContext,
-    systemPromptTemplate: systemPromptInput?.value || "",
-    taskInstruction: getTaskInstruction(body)
-  });
+  const previewMessages =
+    retryOptions?.retryMessages ||
+    buildPreviewMessages({
+      context: currentTextContext,
+      systemPromptTemplate: systemPromptInput?.value || "",
+      taskInstruction: getTaskInstruction(body)
+    });
   const latestUserMessage = previewMessages.find((message) => message.role === "user");
 
-  if (latestUserMessage) {
+  if (latestUserMessage && !retryOptions) {
     pushChatMessage(
       body,
       buildChatMessageEntry({
@@ -1064,7 +1105,9 @@ async function sendCurrentPreview(body: HTMLDivElement): Promise<void> {
   pushChatMessage(
     body,
     buildChatMessageEntry({
-      content: "Requesting model response...",
+      content: retryOptions
+        ? "Retrying failed request..."
+        : "Requesting model response...",
       mode: "text",
       role: "status",
       tone: "loading"
@@ -1079,7 +1122,7 @@ async function sendCurrentPreview(body: HTMLDivElement): Promise<void> {
       apiKey: apiKeyInput?.value || "",
       baseUrl: baseUrlInput?.value || "",
       messages: previewMessages,
-      model: modelInput?.value || "",
+      model: retryOptions?.model || modelInput?.value || "",
       timeoutMs: 30000
     });
 
@@ -1123,6 +1166,8 @@ async function sendCurrentPreview(body: HTMLDivElement): Promise<void> {
         content: `Request failed.\n\n${message}`,
         mode: "text",
         role: "status",
+        retryMessages: previewMessages,
+        retryModel: retryOptions?.model || modelInput?.value || "",
         tone: "error"
       })
     );

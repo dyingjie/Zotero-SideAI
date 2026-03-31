@@ -919,6 +919,25 @@ describe("startup", function () {
     );
   });
 
+  it("should preserve retry metadata on error chat entries", function () {
+    const retryMessages = [
+      { role: "system", content: "System prompt" },
+      { role: "user", content: "Question body" }
+    ] as const;
+    const errorMessage = buildChatMessageEntry({
+      content: "Request failed.\n\nNetwork down.",
+      mode: "text",
+      role: "status",
+      retryMessages: [...retryMessages],
+      retryModel: "gpt-5.4",
+      tone: "error"
+    });
+
+    assert.strictEqual(errorMessage.tone, "error");
+    assert.strictEqual(errorMessage.retryModel, "gpt-5.4");
+    assert.deepEqual(errorMessage.retryMessages, retryMessages);
+  });
+
   it("should clean plugin instance on shutdown", async function () {
     const plugin = Zotero[config.addonInstance] as {
       data: { alive?: boolean; initialized?: boolean };
