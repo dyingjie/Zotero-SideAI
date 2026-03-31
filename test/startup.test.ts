@@ -655,6 +655,38 @@ describe("startup", function () {
         "Abstract body"
       ].join("\n")
     );
+
+    assert.strictEqual(
+      formatPreviewMessages(messages, {
+        abstractText: "Abstract body",
+        contextSource: "pdf-reader",
+        contextSourceLabel: "PDF Context",
+        notesText: "Note body",
+        pdfSelectionText: "Selected sentence",
+        previewText:
+          "PDF Selection:\nSelected sentence\n\nTitle:\nPaper title\n\nAbstract:\nAbstract body",
+        title: "Paper title"
+      }),
+      [
+        "Context Source:",
+        "PDF Context",
+        "",
+        "SYSTEM:",
+        "Summarize Paper title with Abstract body.",
+        "",
+        "USER:",
+        "Please analyze the following paper.",
+        "",
+        "PDF Selection:",
+        "Selected sentence",
+        "",
+        "Title:",
+        "Paper title",
+        "",
+        "Abstract:",
+        "Abstract body"
+      ].join("\n")
+    );
   });
 
   it("should use active composer text as task instruction when provided", function () {

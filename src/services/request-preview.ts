@@ -28,9 +28,16 @@ export function buildPreviewMessages(input: {
 }
 
 export function formatPreviewMessages(
-  messages: ChatCompletionMessage[]
+  messages: ChatCompletionMessage[],
+  context?: CurrentTextContext
 ): string {
-  return messages
-    .map((message) => `${message.role.toUpperCase()}:\n${message.content}`)
-    .join("\n\n");
+  const sections = messages.map(
+    (message) => `${message.role.toUpperCase()}:\n${message.content}`
+  );
+
+  if (context?.contextSourceLabel) {
+    sections.unshift(`Context Source:\n${context.contextSourceLabel}`);
+  }
+
+  return sections.join("\n\n");
 }

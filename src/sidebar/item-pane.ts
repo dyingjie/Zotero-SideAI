@@ -902,7 +902,8 @@ function refreshRequestPreview(body: HTMLDivElement): void {
       systemPromptTemplate:
         systemPromptInput?.value || getSelectedPromptPreset().prompt,
       taskInstruction
-    })
+    }),
+    currentTextContext
   );
 }
 
