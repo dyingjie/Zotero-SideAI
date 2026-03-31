@@ -514,6 +514,25 @@ describe("startup", function () {
     assert.strictEqual(regularLayout.outputMaxHeight, "180px");
   });
 
+  it("should keep chat layout usable across Zotero 8 pane width changes", function () {
+    const compactLayout = getPaneLayoutProfile(280);
+    const regularLayout = getPaneLayoutProfile(420);
+
+    assert.strictEqual(compactLayout.isCompact, true);
+    assert.strictEqual(compactLayout.buttonFlex, "1 1 100%");
+    assert.strictEqual(compactLayout.buttonMinHeight, "32px");
+    assert.strictEqual(compactLayout.outputMaxHeight, "144px");
+    assert.strictEqual(compactLayout.historyMaxHeight, "128px");
+    assert.strictEqual(compactLayout.textareaMinHeight, "80px");
+
+    assert.strictEqual(regularLayout.isCompact, false);
+    assert.strictEqual(regularLayout.buttonFlex, "1 1 80px");
+    assert.strictEqual(regularLayout.buttonMinHeight, "28px");
+    assert.strictEqual(regularLayout.outputMaxHeight, "180px");
+    assert.strictEqual(regularLayout.historyMaxHeight, "160px");
+    assert.strictEqual(regularLayout.textareaMinHeight, "96px");
+  });
+
   it("should sanitize abnormal html-like note text into safe preview text", function () {
     assert.strictEqual(
       stripHtml(
